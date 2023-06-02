@@ -5,6 +5,22 @@
 #define fori(i,n) for(int i = 0; i < n; i++)
 #define pb push_back
 
+
+// float is 4 bit 
+#define FLOATINGPOINT float
+
+// float is 8 bit 
+#define FLOATINGPOINT double
+
+
+
+// Acivation Functions
+#define Linear_ACTIVATION 0
+#define ReLU_ACTIVATION 1
+#define Sigmoid_ACTIVATION 2
+#define Exponential_ACTIVATION 3
+
+
 namespace std
 {
     
@@ -27,6 +43,17 @@ namespace std
 
         // float storing bias
         float bias;
+
+        // int to store activation function of the layer
+            // 0 = ReLU
+            // 1 = Linear
+            // 2 = sigmoid
+            // 3 = exponential
+        __UINT16_TYPE__ activationFn = 0;
+
+
+        
+
 
         
 
