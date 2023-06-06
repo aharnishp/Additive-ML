@@ -1,4 +1,4 @@
-#include<vector>
+#include<vector.h>
 
 #define telemetry 1
 #define fori(i,n) for(int i = 0; i < n; i++)
@@ -15,7 +15,7 @@
 
 
 #ifdef TELEMETRY
-  #include<iostream>
+  #include<iostream.h>
   #define TELEMETRY(x) cout << x << endl;
 #else
   #define TELEMETRY(x)
@@ -101,7 +101,7 @@ namespace std
 
         // FIXME:
         // stores the value of last activation
-        vector<def_float_t> cached_acivation_values;
+        vector<vector<vector<def_float_t>>> cached_acivation_values;
 
 
         // FUTURE:
@@ -180,6 +180,17 @@ namespace std
         }
 
         // pass the vector of cached values 
+        vector<vector<vector<def_float_t>>> get_cached_activation_values()
+        {
+            return this->cached_acivation_values;
+        }
+
+        def_int_t add_input_layer(nlayer * new_layer)  // success = 0, failure = -1
+        {
+            // check if it is not same as this
+            this->input_layers.push_back(new_layer);
+        }
+        
 
 
 
