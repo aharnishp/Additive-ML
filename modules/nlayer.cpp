@@ -1,11 +1,10 @@
-#include<vector.h>
+#include "nlayer.hpp"
 
 #define telemetry 1
 #define fori(i,n) for(int i = 0; i < n; i++)
 #define pb push_back
 
 // Compile Time Parameters 
-#define Low_Memory_Target 1
 
 
 // Settings
@@ -15,29 +14,11 @@
 
 
 #ifdef TELEMETRY
-  #include<iostream.h>
+  #include<iostream>
   #define TELEMETRY(x) cout << x << endl;
 #else
   #define TELEMETRY(x)
 #endif
-
-
-// Compile Parameter Code
-#ifdef Low_Memory_Target == 1
-  // float is 4 bit 
-  #define def_float_t float
-  #define def_uint_small_t __UINT8_TYPE__
-  #define def_uint_t __UINT16_TYPE__
-  #define def_int_t __INT16_TYPE__
-  
-#else
-  // float is 8 bit 
-  #define def_float_t double
-  #define def_uint_small_t __UINT16_TYPE__
-  #define def_uint_t __UINT32_TYPE__
-  #define def_int_t __INT32_TYPE__
-#endif
-
 
 
 
