@@ -243,6 +243,17 @@ namespace std
             return 0;
         }
 
+        vector<vector<vector<def_float_t>>> get_activation(def_int_t run_id){
+            if(this->cached_run_id == run_id){
+                return cached_acivation_values;
+            }
+            
+        }
+
+        void set_activation_fn(def_uint_t new_activation_fn){
+            this->activationFn = new_activation_fn;
+        }
+
 
 
         void reset_weights()
@@ -255,9 +266,12 @@ namespace std
 
                 // check if dimension of existing weights is correct
                 if(allocated_weight_x != weight_x || allocated_weight_y != weight_y){
-                    // size allocated is incorrect
+                    // size allocated is old or incorrect
+                    // deallocate weight matrix
+                    
 
                 }
+
                 def_uint_t count = 0;
                 fori(i,allocated_weight_x){
                     fori(j,allocated_weight_y){
