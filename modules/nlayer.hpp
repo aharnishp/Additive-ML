@@ -5,7 +5,7 @@
 
 
 // Compile Parameter Code
-#ifdef Low_Memory_Target == 1
+#ifdef Low_Memory_Target
   // float is 4 bit 
   #define def_float_t float
   #define def_uint_small_t __UINT8_TYPE__
@@ -78,5 +78,5 @@ class nlayer{
         def_uint_small_t is_input_layer;
 
         
-        void nlayer::nlayer(def_uint_t x, def_uint_t y, def_uint_t z, def_uint_t activationFn, def_float_t learningRate);
-}
+        nlayer(def_uint_t x, def_uint_t y, def_uint_t z, def_uint_t activationFn, def_float_t learningRate);
+};

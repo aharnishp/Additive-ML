@@ -1,0 +1,8 @@
+results of speed test of matrix multiplication
+
+10000x OpenBlas = 32796 ms
+1000x OpenBlas = 33 ms
+100x OpenBlas < 1 ms
+
+1000x C-style = 2842 ms
+1000x std::vector = 8341 ms
