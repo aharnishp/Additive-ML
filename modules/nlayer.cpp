@@ -7,8 +7,7 @@
 #define fori(i,n) for(int i = 0; i < n; i++)
 #define pb push_back
 
-// Compile Time Parameters 
-
+//// Compile Time Parameters 
 
 // Settings
 #define TELEMETRY 1
@@ -62,19 +61,20 @@ namespace std
 
     public:
 
+        // general info
         def_uint_t id = 0;
-        def_uint_t layerVersion = 0;
-
+        def_uint_t layer_type = Fully_Connected_INPUTS;
+        // def_uint_t layerVersion = 0;
 
         // shape of this 3D layer
         def_uint_t x;
         def_uint_t y;
         def_uint_t z;
 
+
         // vector of pointers storing pointer to input layers
         vector<nlayer*> input_layers;
 
-        def_uint_t layer_type = Fully_Connected_INPUTS;
 
 
         def_uint_t weight_x = 1; def_uint_t weight_y = 1;
@@ -106,6 +106,8 @@ namespace std
 
         // FIXME:
         // stores the value of last activation
+        // if a convolutional layer, then cached values would be 3D,
+        // if a normal layer, then cached values would be 1D
         vector<vector<vector<def_float_t>>> cached_acivation_values;
 
 
