@@ -56,33 +56,42 @@ namespace std
     private:
         // if the layer type is linear fully connected, then weight is 2D dimensional
         // def_float_t** weights = NULL;
-        def_float_t* weights_allocator = NULL;
-        def_uint_t allocated_weight_x = 0; def_uint_t allocated_weight_y = 0;
+        // def_float_t* weights_allocator = NULL;
+        // def_uint_t allocated_weight_x = 0; def_uint_t allocated_weight_y = 0;
 
     public:
 
         // general info
         def_uint_t id = 0;
-        def_uint_t layer_type = Fully_Connected_INPUTS;
+
+        def_uint_small_t layer_type = Fully_Connected_INPUTS;
         // def_uint_t layerVersion = 0;
 
         // shape of this 3D layer
-        def_uint_t x;
-        def_uint_t y;
-        def_uint_t z;
+        def_uint_t x = 1;
+        def_uint_t y = 1;
+        def_uint_t z = 1;
 
 
         // vector of pointers storing pointer to input layers
         vector<nlayer*> input_layers;
 
 
+        // weights will only be used when not an input layer and layer_type = Fully Connected
+        def_uint_t weight_inp = 0; def_uint_t weight_out = 0;
+        // NOTE: 2D weights matrix is stored as as 1D flattened vector expected as row major.
+        vector<def_float_t> weights; // weights[px][py] = weights[px*weight_inp + py]
 
-        def_uint_t weight_x = 1; def_uint_t weight_y = 1;
-        // vector<def_float_t> weights;
+        // NOTE: 4D vector of filters is stored as 1D flattened vector expected as row major. Hence all filters must be of same size or need to make new layer for heterogenous sizes.
+        def_uint_t num_filters = 0;
 
+        def_uint_t filter_x = 0;
+        def_uint_t filter_y = 0;
+        def_uint_t filter_z = 0;
 
-        // if the layer is convolutional, then it requires multiple 3D filters stored as weights
-        // 3D vector storing weights
+        vector<def_float_t> conv_filters;
+        // DEPRECTATED: //  vector<vector<vector<vector<def_float_t>>>> conv_filters;
+
 
         // float storing bias
         def_float_t bias;
@@ -108,7 +117,8 @@ namespace std
         // stores the value of last activation
         // if a convolutional layer, then cached values would be 3D,
         // if a normal layer, then cached values would be 1D
-        vector<vector<vector<def_float_t>>> cached_acivation_values;
+        // NOTE: is now 1D flattened vector expected as row major
+        vector<def_float_t> cached_acivation_values;
 
 
         // FUTURE:
@@ -125,46 +135,41 @@ namespace std
         def_uint_small_t is_input_layer = 0;
 
 
-        def_float_t get_weight(def_uint_t px, def_uint_t py){
-            if(px < weight_x && px < weight_y){
-                // std::cout << "(" << px << " , " << py << ")";
-                // std::cout << " off=" << (weight_x * py + px) << " > ";
-                return weights_allocator[(weight_x * py + px)*sizeof(def_float_t)];
-            }else{
-                print_telm("get address not in weight matrix range." << px << ',' << py)
-                return -1;
-            }
-        }
-
-        void set_weight(def_uint_t px, def_uint_t py, def_float_t new_value){
-            if(px < weight_x && px < weight_y){
-                weights_allocator[(weight_x * py + px)*sizeof(def_float_t)] = new_value;
-            }else{
-                print_telm("get address not in weight matrix range." << px << ',' << py)
-            }
-        }
-        
         nlayer(){};
 
         nlayer(def_uint_t x, def_uint_t y, def_uint_t z, def_uint_t activationFn, def_float_t learningRate)
         {
+            this->layer_type = Convolutional_INPUTS;
             this->x = x;
             this->y = y;
             this->z = z;
             this->activationFn = activationFn;
             this->learningRate = learningRate;
-            this->layerVersion = DEFAULT_LAYER_VERSION;
+            // this->layerVersion = DEFAULT_LAYER_VERSION;
             this->is_dynamic_layer = 1;
         }
 
+        // nlayer(def_uint_small_t new_layer_type, def_uint_t x, def_uint_t y, def_uint_t z, def_uint_t activationFn, def_float_t learningRate)
+        // {
+        //     this->layer_type = new_layer_type;
+        //     this->x = x;
+        //     this->y = y;
+        //     this->z = z;
+        //     this->activationFn = activationFn;
+        //     this->learningRate = learningRate;
+        //     // this->layerVersion = DEFAULT_LAYER_VERSION;
+        //     this->is_dynamic_layer = 1;
+        // }
+
         nlayer(def_uint_t x, def_uint_t y, def_uint_t z, def_uint_t activationFn)
         {
+            this->layer_type = Convolutional_INPUTS;
             this->x = x;
             this->y = y;
             this->z = z;
             this->activationFn = activationFn;
             this->learningRate = INITIAL_LEARNING_RATE;
-            this->layerVersion = DEFAULT_LAYER_VERSION;
+            // this->layerVersion = DEFAULT_LAYER_VERSION;
             this->is_dynamic_layer = 1;
         }
 
@@ -175,32 +180,70 @@ namespace std
             this->z = 1;
             this->activationFn = activationFn;
             this->learningRate = learningRate;
-            this->layerVersion = DEFAULT_LAYER_VERSION;
+            // this->layerVersion = DEFAULT_LAYER_VERSION;
             this->is_dynamic_layer = 1;
         }
 
-        def_uint_t init_weight() {
-
-            // check dimensions > 0
-            if(this->weight_y < 1 || this->weight_x < 1){ return -1; }
-
-            if(weights_allocator != NULL){
-                if(allocated_weight_x != weight_x || allocated_weight_y != weight_y){
-                    reset_weights();
+        
+        def_float_t get_weight_value(def_uint_t px, def_uint_t py){
+            if(layer_type==Fully_Connected_INPUTS){
+                if(px < weight_inp && py < weight_out){
+                    return (weights[px*weight_inp + py]);
                 }else{
-                    print_telm("Weight already allocated to " << weights_allocator);
-                    return -1; // already allocated
+                    return (-1);
+                }
+            }else{
+                return (-1);
+            }
+        }
+
+        
+
+        def_uint_t init_weight() {
+            // check current layer type
+            if(this->layer_type != Fully_Connected_INPUTS){
+                return(-1);
+            }
+
+            // find the output dimension of every layer in the input_layer array
+            def_int_t input_length = 0;
+
+            for(int i = 0; i < input_layers.size(); i++){
+                auto this_layer = *(input_layers[i]);
+                cout << this_layer.get_id() << endl;
+
+                if(this_layer.layer_type == Fully_Connected_INPUTS){
+                    input_length += this_layer.x;
+                    print_telm("Added from FCLayer +" << this_layer.x << ".");
+                }else if(this_layer.layer_type == Convolutional_INPUTS){
+                    print_telm("Added from CNV layer +" << this_layer.x * this_layer.y * this_layer.z);
+                    input_length += (this_layer.x * this_layer.y * this_layer.z);
+                }else{
+                    print_telm("! - Layer type unexpected when calculating input size.");
                 }
             }
 
+            print_telm("Total input size is " << input_length);
 
-            // intialize to 0
-            if(this->layer_type == Fully_Connected_INPUTS) {
-                allocated_weight_x = weight_x;
-                allocated_weight_y = weight_y;
-                weights_allocator = new def_float_t[allocated_weight_x * allocated_weight_y];
-                memset(weights_allocator, 0, allocated_weight_x * allocated_weight_y);
+            // FIXME:
+            // check if this conforms to the format
+            if(weight_inp > input_length){print_telm("Inputs to this layer lower than before.");}
+            weight_inp = input_length;
+            weight_out = this->x;
+
+            // TODO:
+            // check if current weight matrix contains something already
+            // else
+            
+            weights.clear();
+            weights.resize(weight_inp * weight_out);
+
+            for(int i = 0; i < weight_inp * weight_out; i++){
+                weights[i] = get_rand_float_seeded(i);
             }
+
+            // therefore the x of weight matrix is input_length before multiplication
+            // check if weight_inp <= 
             return 0;
         }
 
@@ -208,17 +251,9 @@ namespace std
             return this->id;
         }
 
-        def_uint_t get_layerVersion() {
-            return this->layerVersion;
-        }
-
-        // void print_weight_matrix(){
-
-        // }
 
         // pass the vector of cached values
-        vector<vector<vector<def_float_t>>> get_cached_activation_values()
-        {
+        vector<def_float_t> get_cached_activation_values(){
             return this->cached_acivation_values;
         }
 
@@ -231,45 +266,47 @@ namespace std
             return 0;
         }
 
-        vector<vector<vector<def_float_t>>> get_activation(def_int_t run_id){
-            if(this->cached_run_id == run_id){
-                return cached_acivation_values;
-            }
-            
-        }
 
         void set_activation_fn(def_uint_t new_activation_fn){
             this->activationFn = new_activation_fn;
         }
 
-
-
-        void reset_weights()
-        {
-            // check this->layer_type
-            if(this->layer_type == Fully_Connected_INPUTS) {
-                if(weights_allocator==NULL){
-
-                }  // if not already allocated
-
-                // check if dimension of existing weights is correct
-                if(allocated_weight_x != weight_x || allocated_weight_y != weight_y){
-                    // size allocated is old or incorrect
-                    // deallocate weight matrix
-                    
-
-                }
-
-                def_uint_t count = 0;
-                fori(i,allocated_weight_x){
-                    fori(j,allocated_weight_y){
-                        set_weight(i,j,get_rand_float_seeded((unsigned int)count));
-                        count++;
-                    }
-                    // weights_allocator[i] = get_rand_float();
-                }
+        vector<def_float_t> get_activation(def_int_t run_id){
+            if(this->cached_run_id == run_id){
+                return cached_acivation_values;
+            }
+            // build an array of input activation before calculating itself's activation
+            for(int i = 0; i < ; i++){
+                
             }
         }
+
+        // void reset_weights()
+        // {
+        //     // check this->layer_type
+        //     if(this->layer_type == Fully_Connected_INPUTS) {
+        //         if(weights_allocator==NULL){
+
+        //         }  // if not already allocated
+
+        //         // check if dimension of existing weights is correct
+        //         if(allocated_weight_x != weight_inp || allocated_weight_y != weight_out){
+        //             // size allocated is old or incorrect
+        //             // deallocate weight matrix
+                    
+
+        //         }
+
+        //         def_uint_t count = 0;
+        //         fori(i,allocated_weight_x){
+        //             fori(j,allocated_weight_y){
+        //                 set_weight(i,j,get_rand_float_seeded((unsigned int)count));
+        //                 count++;
+        //             }
+        //             // weights_allocator[i] = get_rand_float();
+        //         }
+        //     }
+        // }
 
 
 

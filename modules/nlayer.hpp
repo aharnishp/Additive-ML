@@ -6,14 +6,14 @@
 
 // Compile Parameter Code
 #ifdef Low_Memory_Target
-  // float is 4 bit 
+  // float is 4 bytes
   #define def_float_t float
   #define def_uint_small_t __UINT8_TYPE__
   #define def_uint_t __UINT16_TYPE__
   #define def_int_t __INT16_TYPE__
   
 #else
-  // float is 8 bit 
+  // float is 8 bytes
   #define def_float_t double
   #define def_uint_small_t __UINT16_TYPE__
   #define def_uint_t __UINT32_TYPE__

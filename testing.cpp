@@ -92,7 +92,7 @@ namespace std
         def_uint_t layer_type = Fully_Connected_INPUTS;
 
 
-        def_uint_t weight_x = 1; def_uint_t weight_y = 1;
+        def_uint_t weight_inp = 1; def_uint_t weight_out = 1;
         // vector<def_float_t> weights;
 
 
@@ -140,10 +140,10 @@ namespace std
         nlayer(){};
 
         def_float_t get_weight(def_uint_t px, def_uint_t py){
-            if(px < weight_x && px < weight_y){
+            if(px < weight_inp && px < weight_out){
                 // std::cout << "(" << px << " , " << py << ")";
-                // std::cout << " off=" << (weight_x * py + px) << " > ";
-                return weights_allocator[(weight_x * py + px)*sizeof(def_float_t)];
+                // std::cout << " off=" << (weight_inp * py + px) << " > ";
+                return weights_allocator[(weight_inp * py + px)*sizeof(def_float_t)];
             }else{
                 print_telm("get address not in weight matrix range." << px << ',' << py)
                 return -1;
@@ -151,8 +151,8 @@ namespace std
         }
 
         void set_weight(def_uint_t px, def_uint_t py, def_float_t new_value){
-            if(px < weight_x && px < weight_y){
-                weights_allocator[(weight_x * py + px)*sizeof(def_float_t)] = new_value;
+            if(px < weight_inp && px < weight_out){
+                weights_allocator[(weight_inp * py + px)*sizeof(def_float_t)] = new_value;
             }else{
                 print_telm("get address not in weight matrix range." << px << ',' << py)
             }
@@ -194,10 +194,10 @@ namespace std
         def_uint_t init_weight() {
 
             // check dimensions > 0
-            if(this->weight_y < 1 || this->weight_x < 1){ return -1; }
+            if(this->weight_out < 1 || this->weight_inp < 1){ return -1; }
 
             if(weights_allocator != NULL){
-                if(allocated_weight_x != weight_x || allocated_weight_y != weight_y){
+                if(allocated_weight_x != weight_inp || allocated_weight_y != weight_out){
                     reset_weights();
                 }else{
                     print_telm("Weight already allocated to " << weights_allocator);
@@ -208,8 +208,8 @@ namespace std
 
             // intialize to 0
             if(this->layer_type == Fully_Connected_INPUTS) {
-                allocated_weight_x = weight_x;
-                allocated_weight_y = weight_y;
+                allocated_weight_x = weight_inp;
+                allocated_weight_y = weight_out;
                 weights_allocator = new def_float_t[allocated_weight_x * allocated_weight_y];
                 memset(weights_allocator, 0, allocated_weight_x * allocated_weight_y);
             }
@@ -265,7 +265,7 @@ namespace std
                 }  // if not already allocated
 
                 // check if dimension of existing weights is correct
-                if(allocated_weight_x != weight_x || allocated_weight_y != weight_y){
+                if(allocated_weight_x != weight_inp || allocated_weight_y != weight_out){
                     // size allocated is old or incorrect
                     // deallocate weight matrix
                     
@@ -317,8 +317,8 @@ int main(){
         std::cout << ((std::nlayer *) (layer1.input_layers[i]))->id << std::endl;
     }
 
-    layer1.weight_x = 3;
-    layer1.weight_y = 4;
+    layer1.weight_inp = 3;
+    layer1.weight_out = 4;
 
     std::cout << "initing weights = " << layer1.init_weight() << std::endl;
 
@@ -328,8 +328,8 @@ int main(){
 
     std::cout << "Printing BEFORE" << std::endl;
     // print weight matrix
-    fori(i, layer1.weight_x){
-        fori(j,layer1.weight_y){
+    fori(i, layer1.weight_inp){
+        fori(j,layer1.weight_out){
             std::cout << layer1.get_weight(i,j) << " ";
         }
         std::cout << std::endl;
@@ -339,8 +339,8 @@ int main(){
 
     std::cout << "Printing AFTER" << std::endl;
     // print weight matrix
-    fori(i, layer1.weight_x){
-        fori(j,layer1.weight_y){
+    fori(i, layer1.weight_inp){
+        fori(j,layer1.weight_out){
             std::cout << layer1.get_weight(i,j) << " ";
         }
         std::cout << std::endl;
