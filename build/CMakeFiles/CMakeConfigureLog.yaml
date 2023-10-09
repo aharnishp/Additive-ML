@@ -465,3 +465,14 @@ events:
       
       
 ...
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineSystem.cmake:211 (message)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      The system is: Linux - 6.1.53-1-MANJARO - x86_64
+...
