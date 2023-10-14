@@ -1,7 +1,7 @@
 #include "nlayer.hpp"
 
 #include<cstring>
-#include<cblas.h>
+// #include<cblas.h>
 
 #define telemetry 1
 #define fori(i,n) for(int i = 0; i < n; i++)
@@ -276,9 +276,9 @@ namespace std
                 return cached_acivation_values;
             }
             // build an array of input activation before calculating itself's activation
-            for(int i = 0; i < ; i++){
+            // for(int i = 0; i < ; i++){
                 
-            }
+            // }
         }
 
         // void reset_weights()
