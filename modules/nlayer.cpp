@@ -92,7 +92,6 @@ namespace std
         vector<def_float_t> conv_filters;
         // DEPRECTATED: //  vector<vector<vector<vector<def_float_t>>>> conv_filters;
 
-
         // float storing bias
         def_float_t bias;
 
@@ -241,6 +240,7 @@ namespace std
             for(int i = 0; i < weight_inp * weight_out; i++){
                 weights[i] = get_rand_float_seeded(i);
             }
+
 
             // therefore the x of weight matrix is input_length before multiplication
             // check if weight_inp <= 
