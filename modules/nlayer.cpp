@@ -276,9 +276,29 @@ namespace std
                 return cached_acivation_values;
             }
             // build an array of input activation before calculating itself's activation
-            // for(int i = 0; i < ; i++){
-                
-            // }
+            // visit all input_layers and add number of nodes to get the final result
+            std::nlayer* curr_layer_ptr;
+
+            vector<nlayer*> visited_layers;
+
+            vector<def_float_t> curr_input_activations;
+            curr_layer_ptr = this;
+            for(int i = 0; i < curr_layer_ptr->input_layers.size(); i++){
+                // checking what is type of this layer
+                if(curr_layer_ptr->input_layers[i]->layer_type == Fully_Connected_INPUTS){
+                    std::cout << "this layer is Fully Connected" << std::endl;
+                    def_uint_t this_input_size = curr_layer_ptr->input_layers[i]->x * curr_layer_ptr->input_layers[i]->y * curr_layer_ptr->input_layers[i]->z;
+
+                    // this_input_size = 
+
+
+
+                }else if(curr_layer_ptr->input_layers[i]->layer_type == Convolutional_INPUTS){
+                    std::cout << "this layer is a Convolutional layer" << std::endl;
+                    
+
+                }
+            }
         }
 
         // void reset_weights()
