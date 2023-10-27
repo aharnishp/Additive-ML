@@ -277,26 +277,30 @@ namespace std
             }
             // build an array of input activation before calculating itself's activation
             // visit all input_layers and add number of nodes to get the final result
+
+            // the changing perspective code starts below.
             std::nlayer* curr_layer_ptr;
+            // vector<nlayer*> visited_layers;
 
-            vector<nlayer*> visited_layers;
-
-            vector<def_float_t> curr_input_activations;
+            vector<def_float_t> curr_input_activations; // store the value vector for input_layers of current layer.
             curr_layer_ptr = this;
+
+            // for current layer, check each input layer
             for(int i = 0; i < curr_layer_ptr->input_layers.size(); i++){
                 // checking what is type of this layer
                 if(curr_layer_ptr->input_layers[i]->layer_type == Fully_Connected_INPUTS){
                     std::cout << "this layer is Fully Connected" << std::endl;
                     def_uint_t this_input_size = curr_layer_ptr->input_layers[i]->x * curr_layer_ptr->input_layers[i]->y * curr_layer_ptr->input_layers[i]->z;
 
-                    // this_input_size = 
-
-
+                    // check if this layer has cached values for current run id
+                    if(curr_layer_ptr->cached_run_id == run_id){
+                        // curr_input_activations.insert(curr_layer_ptr->cached_acivation_values);
+                        curr_input_activations.insert(curr_input_activations.end(), curr_layer_ptr->cached_acivation_values.begin(), curr_layer_ptr->cached_acivation_values.end() );
+                    }
 
                 }else if(curr_layer_ptr->input_layers[i]->layer_type == Convolutional_INPUTS){
                     std::cout << "this layer is a Convolutional layer" << std::endl;
                     
-
                 }
             }
         }
