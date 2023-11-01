@@ -3,7 +3,6 @@
 #include<cstring>
 // #include<cblas.h>
 
-#define telemetry 1
 #define fori(i,n) for(int i = 0; i < n; i++)
 #define pb push_back
 
@@ -271,12 +270,48 @@ namespace std
             this->activationFn = new_activation_fn;
         }
 
+        vector<def_float_t> get_activation_rec(def_int_t run_id){
+            // this is memory in efficient, but faster to implement.
+            if(this->cached_run_id == run_id){
+                if(TELEMETRY) { std::cout << "Result returned from cache. id=" << this->id << " size=" << this->x * this->y * this->z << std::endl;}
+                return cached_acivation_values;
+            }
+
+            this->being_evaluated = 1;
+
+            if(this->layer_type == Fully_Connected_INPUTS){
+                // build an array of input activation before calculating itself's activation
+                // visit all input_layers and add number of nodes to get their activations
+                vector<def_float_t> input_activations;
+
+                // collect activations of all layers and append to vector input_activations
+                for(int i = 0; i < this->input_layers.size(); i++){
+                    vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id);
+                    input_activations.insert(input_activations.end(), new_activation.begin(), new_activation.end());
+                }
+
+                // if(TELEMETRY) { std::cout << "inputs=" << std::endl; }
+
+                // check if existing dimensions of this->weights matches with size of inputs 
+
+
+
+                this->being_evaluated = 0;
+            }else if(this->layer_type == Convolutional_INPUTS){
+
+                this->being_evaluated = 0;
+            }
+
+
+            
+        }
+
         vector<def_float_t> get_activation(def_int_t run_id){
             if(this->cached_run_id == run_id){
                 return cached_acivation_values;
             }
             // build an array of input activation before calculating itself's activation
-            // visit all input_layers and add number of nodes to get the final result
+            // visit all input_layers and add number of nodes to get their activations
 
             // the changing perspective code starts below.
             std::nlayer* curr_layer_ptr;
