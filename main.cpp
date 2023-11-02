@@ -34,11 +34,8 @@ int main(){
 
     layer1.init_weight();
     // std::cout <<  << std::endl;
-
     // std::cout << "initing weights = " << layer1.init_weight() << std::endl;
-
     // // std::cout << "random float: " << get_rand_float() << std::endl;
-
     // std::cout << "Printing BEFORE" << std::endl;
     // // print weight matrix
     // fori(i, layer1.weight_inp){
@@ -47,9 +44,7 @@ int main(){
     //     }
     //     std::cout << std::endl;
     // }
-
     // // layer1.reset_weights();
-
     // // std::cout << "Printing AFTER" << std::endl;
     // // // print weight matrix
     // // fori(i, layer1.weight_inp){

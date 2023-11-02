@@ -77,7 +77,9 @@ namespace std
 
 
         // weights will only be used when not an input layer and layer_type = Fully Connected
-        def_uint_t weight_inp = 0; def_uint_t weight_out = 0;
+        // INFO: the number of rows in the weight matrix corresponds to the number of input units, and the number of columns corresponds to the number of output units.
+        def_uint_t weight_inp = 0;  
+        def_uint_t weight_out = 0;
         // NOTE: 2D weights matrix is stored as as 1D flattened vector expected as row major.
         vector<def_float_t> weights; // weights[px][py] = weights[px*weight_inp + py]
 
@@ -195,8 +197,6 @@ namespace std
             }
         }
 
-        
-
         def_uint_t init_weight() {
             // check current layer type
             if(this->layer_type != Fully_Connected_INPUTS){
@@ -246,6 +246,26 @@ namespace std
             return 0;
         }
 
+        def_uint_small_t auto_resize_weight(def_uint_t preferred_input_size, def_uint_t preferred_output_size){
+            if(this->layer_type == Fully_Connected_INPUTS){
+                // weight_out must also equal x * y * z
+                if(weight_inp == preferred_input_size && weight_out == preferred_output_size){
+                    return 0;   // if already the same size.
+                }
+                while(weight_inp != preferred_input_size || weight_out != preferred_output_size){
+                    // try to resize both dimensions until successfully resized
+
+                }
+                return 1;
+            }else if(this->layer_type == Convolutional_INPUTS){
+
+            }
+
+            // return 1;   // if had to resize.
+            // return 0;   // if already the same size.
+            return -1;  // if this size is smaller than preferred.
+        }
+
         def_uint_t get_id() {
             return this->id;
         }
@@ -280,6 +300,8 @@ namespace std
             this->being_evaluated = 1;
 
             if(this->layer_type == Fully_Connected_INPUTS){
+                // confirm if this layer weights are initialised
+                this->init_weight();
                 // build an array of input activation before calculating itself's activation
                 // visit all input_layers and add number of nodes to get their activations
                 vector<def_float_t> input_activations;
@@ -293,7 +315,7 @@ namespace std
                 // if(TELEMETRY) { std::cout << "inputs=" << std::endl; }
 
                 // check if existing dimensions of this->weights matches with size of inputs 
-
+                
 
 
                 this->being_evaluated = 0;
@@ -306,39 +328,78 @@ namespace std
             
         }
 
-        vector<def_float_t> get_activation(def_int_t run_id){
-            if(this->cached_run_id == run_id){
-                return cached_acivation_values;
-            }
-            // build an array of input activation before calculating itself's activation
-            // visit all input_layers and add number of nodes to get their activations
+        // vector<def_float_t> get_activation(def_int_t run_id){
+        //     if(this->cached_run_id == run_id){
+        //         return cached_acivation_values;
+        //     }
+            
+        //     if(this->layer_type == Fully_Connected_INPUTS){
+        //         // build an array of input activation before calculating itself's activation
+        //         // visit all input_layers and add number of nodes to get their activations
+        //         vector<def_float_t> input_activations;
 
-            // the changing perspective code starts below.
-            std::nlayer* curr_layer_ptr;
-            // vector<nlayer*> visited_layers;
+        //         // check if all inputs of this layer have cached their activations?
+        //         for(int i = 0; i < this->input_layers.size(); i++){
+        //             // if this->input_layers[i]->cached_run_id is same as run_id, it was calculated in this iteration.
+        //             if(this->input_layers[i]->cached_run_id == run_id){
+                        
+        //             }
+        //         }
+                
 
-            vector<def_float_t> curr_input_activations; // store the value vector for input_layers of current layer.
-            curr_layer_ptr = this;
+        //         // // if only it were so simple: // collect activations of all layers and append to vector input_activations
+        //         // for(int i = 0; i < this->input_layers.size(); i++){
+        //         //     vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id);
+        //         //     input_activations.insert(input_activations.end(), new_activation.begin(), new_activation.end());
+        //         // }
 
-            // for current layer, check each input layer
-            for(int i = 0; i < curr_layer_ptr->input_layers.size(); i++){
-                // checking what is type of this layer
-                if(curr_layer_ptr->input_layers[i]->layer_type == Fully_Connected_INPUTS){
-                    std::cout << "this layer is Fully Connected" << std::endl;
-                    def_uint_t this_input_size = curr_layer_ptr->input_layers[i]->x * curr_layer_ptr->input_layers[i]->y * curr_layer_ptr->input_layers[i]->z;
+        //         // if(TELEMETRY) { std::cout << "inputs=" << std::endl; }
 
-                    // check if this layer has cached values for current run id
-                    if(curr_layer_ptr->cached_run_id == run_id){
-                        // curr_input_activations.insert(curr_layer_ptr->cached_acivation_values);
-                        curr_input_activations.insert(curr_input_activations.end(), curr_layer_ptr->cached_acivation_values.begin(), curr_layer_ptr->cached_acivation_values.end() );
-                    }
+        //         // check if existing dimensions of this->weights matches with size of inputs 
 
-                }else if(curr_layer_ptr->input_layers[i]->layer_type == Convolutional_INPUTS){
-                    std::cout << "this layer is a Convolutional layer" << std::endl;
+
+
+        //         this->being_evaluated = 0;
+        //     }else if(this->layer_type == Convolutional_INPUTS){
+
+        //         this->being_evaluated = 0;
+        //     }
+
+        // }
+
+        // vector<def_float_t> get_activation(def_int_t run_id){
+        //     if(this->cached_run_id == run_id){
+        //         return cached_acivation_values;
+        //     }
+        //     // build an array of input activation before calculating itself's activation
+        //     // visit all input_layers and add number of nodes to get their activations
+
+        //     // the changing perspective code starts below.
+        //     std::nlayer* curr_layer_ptr;
+        //     // vector<nlayer*> visited_layers;
+
+        //     vector<def_float_t> curr_input_activations; // store the value vector for input_layers of current layer.
+        //     curr_layer_ptr = this;
+
+        //     // for current layer, check each input layer
+        //     for(int i = 0; i < curr_layer_ptr->input_layers.size(); i++){
+        //         // checking what is type of this layer
+        //         if(curr_layer_ptr->input_layers[i]->layer_type == Fully_Connected_INPUTS){
+        //             std::cout << "this layer is Fully Connected" << std::endl;
+        //             def_uint_t this_input_size = curr_layer_ptr->input_layers[i]->x * curr_layer_ptr->input_layers[i]->y * curr_layer_ptr->input_layers[i]->z;
+
+        //             // check if this layer has cached values for current run id
+        //             if(curr_layer_ptr->cached_run_id == run_id){
+        //                 // curr_input_activations.insert(curr_layer_ptr->cached_acivation_values);
+        //                 curr_input_activations.insert(curr_input_activations.end(), curr_layer_ptr->cached_acivation_values.begin(), curr_layer_ptr->cached_acivation_values.end() );
+        //             }
+
+        //         }else if(curr_layer_ptr->input_layers[i]->layer_type == Convolutional_INPUTS){
+        //             std::cout << "this layer is a Convolutional layer" << std::endl;
                     
-                }
-            }
-        }
+        //         }
+        //     }
+        // }
 
         // void reset_weights()
         // {
