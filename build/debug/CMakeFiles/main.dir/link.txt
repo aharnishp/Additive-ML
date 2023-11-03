@@ -1,0 +1,1 @@
+/usr/bin/c++ -g -rdynamic CMakeFiles/main.dir/main.cpp.o -o main   -L/home/aharnish/Documents/Development/ML/Additive-ML/modules 
