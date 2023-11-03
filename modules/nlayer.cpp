@@ -348,6 +348,7 @@ namespace std
 
                         cblas_sgemv(CblasRowMajor, CblasNoTrans, weight_inp, weight_out, 1.0f, weights.data(), weight_out, input_activations.data(), 1, 0.0f, output_vector.data(), 1);
 
+
                         return output_vector;
                     #else
                         // TODO: Add a fallback code for other platforms

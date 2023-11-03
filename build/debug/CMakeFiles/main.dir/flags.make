@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/aharnish/Documents/Development/ML/Additive-ML/openblas -I/home/aharnish/Documents/Development/ML/Additive-ML/pthread -I/home/aharnish/Documents/Development/ML/Additive-ML/gfortran
+CXX_INCLUDES = -I/home/aharnish/Documents/Development/ML/Additive-ML/openblas -I/home/aharnish/Documents/Development/ML/Additive-ML/pthread -I/home/aharnish/Documents/Development/ML/Additive-ML/gfortran -I/usr/include/openblas
 
 CXX_FLAGS = -g
 

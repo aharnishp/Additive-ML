@@ -125,6 +125,22 @@
 			"isCMake" : true,
 			"isExternal" : true,
 			"path" : "/usr/share/cmake/Modules/CMakeCommonLanguageInclude.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "/usr/lib/cmake/OpenBLAS/OpenBLASConfigVersion.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "/usr/lib/cmake/OpenBLAS/OpenBLASConfig.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "/usr/lib/cmake/OpenBLAS/OpenBLASTargets.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "/usr/lib/cmake/OpenBLAS/OpenBLASTargets-noconfig.cmake"
 		}
 	],
 	"kind" : "cmakeFiles",

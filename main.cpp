@@ -56,6 +56,8 @@ int main(){
         std::cout << std::endl;
     }
 
+    std::cout << "Compiling version 5" << std::endl;
+
     layer2.get_activation_rec(1);
 
     

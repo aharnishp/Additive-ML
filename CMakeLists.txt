@@ -2,14 +2,26 @@ cmake_minimum_required(VERSION 3.5)
 
 project(MyProject)
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+# if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
     # Add include directories specific to x86_64, ARMv8, or arm64
     include_directories(openblas pthread gfortran)
-endif()
 
-add_executable(main main.cpp)
+    add_executable(main main.cpp)
+    
+    find_package(OpenBLAS REQUIRED)
+    
+    # target_link_directories(main PRIVATE modules/ ${OpenBLAS_INCLUDE_DIRS})
+    target_include_directories(main PRIVATE /usr/include/openblas)
 
-target_link_directories(main PRIVATE modules/)
+    target_link_libraries(main PRIVATE /usr/lib/libopenblas.so)
+    target_link_libraries(main PRIVATE pthread gfortran)
+
+# else()
+#     add_executable(main main.cpp)
+    
+#     target_link_directories(main PRIVATE modules/)
+# endif()
+
 
 # If you need to link libraries, you can add them with target_link_libraries()
 # For example: target_link_libraries(main PRIVATE library_name)

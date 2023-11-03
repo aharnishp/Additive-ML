@@ -11,8 +11,9 @@
 		"commands" : 
 		[
 			"add_executable",
-			"target_link_directories",
-			"include_directories"
+			"target_link_libraries",
+			"include_directories",
+			"target_include_directories"
 		],
 		"files" : 
 		[
@@ -26,19 +27,31 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 10,
+				"line" : 9,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 12,
+				"line" : 16,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 17,
 				"parent" : 0
 			},
 			{
 				"command" : 2,
 				"file" : 0,
 				"line" : 7,
+				"parent" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 14,
 				"parent" : 0
 			}
 		]
@@ -55,16 +68,20 @@
 			"includes" : 
 			[
 				{
-					"backtrace" : 3,
+					"backtrace" : 4,
 					"path" : "/home/aharnish/Documents/Development/ML/Additive-ML/openblas"
 				},
 				{
-					"backtrace" : 3,
+					"backtrace" : 4,
 					"path" : "/home/aharnish/Documents/Development/ML/Additive-ML/pthread"
 				},
 				{
-					"backtrace" : 3,
+					"backtrace" : 4,
 					"path" : "/home/aharnish/Documents/Development/ML/Additive-ML/gfortran"
+				},
+				{
+					"backtrace" : 5,
+					"path" : "/usr/include/openblas"
 				}
 			],
 			"language" : "CXX",
@@ -89,8 +106,18 @@
 			},
 			{
 				"backtrace" : 2,
-				"fragment" : "-L/home/aharnish/Documents/Development/ML/Additive-ML/modules",
-				"role" : "libraryPath"
+				"fragment" : "/usr/lib/libopenblas.so",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 3,
+				"fragment" : "-lpthread",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 3,
+				"fragment" : "-lgfortran",
+				"role" : "libraries"
 			}
 		],
 		"language" : "CXX"

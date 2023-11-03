@@ -217,6 +217,9 @@ MyProject_IS_TOP_LEVEL:STATIC=ON
 //Value Computed by CMake
 MyProject_SOURCE_DIR:STATIC=/home/aharnish/Documents/Development/ML/Additive-ML
 
+//The directory containing a CMake configuration file for OpenBLAS.
+OpenBLAS_DIR:PATH=/usr/lib/cmake/OpenBLAS
+
 
 ########################
 # INTERNAL cache entries
