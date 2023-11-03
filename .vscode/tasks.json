@@ -1,16 +1,6 @@
 {
     "tasks": [
         {
-            "label": "build",
-            "type": "shell",
-            "command": "cmake -B build/debug -DCMAKE_BUILD_TYPE=Debug && ./build/main",
-            "group": "build",
-            "presentation": {
-                "reveal": "silent"
-            },
-            "problemMatcher": "$gcc"
-        },
-        {
             "type": "cppbuild",
             "label": "C/C++: g++ build active file",
             "command": "/usr/bin/g++",

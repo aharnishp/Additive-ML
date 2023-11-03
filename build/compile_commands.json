@@ -1,7 +1,7 @@
 [
 {
   "directory": "/home/aharnish/Documents/Development/ML/Additive-ML/build",
-  "command": "/usr/lib64/ccache/c++ -g -o CMakeFiles/main.dir/main.cpp.o -c /home/aharnish/Documents/Development/ML/Additive-ML/main.cpp",
+  "command": "/usr/bin/g++ -I/home/aharnish/Documents/Development/ML/Additive-ML/openblas -I/home/aharnish/Documents/Development/ML/Additive-ML/pthread -I/home/aharnish/Documents/Development/ML/Additive-ML/gfortran -g -o CMakeFiles/main.dir/main.cpp.o -c /home/aharnish/Documents/Development/ML/Additive-ML/main.cpp",
   "file": "/home/aharnish/Documents/Development/ML/Additive-ML/main.cpp",
   "output": "CMakeFiles/main.dir/main.cpp.o"
 }

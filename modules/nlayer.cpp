@@ -1,10 +1,16 @@
 #include "nlayer.hpp"
 
 #include<cstring>
-// #include<cblas.h>
+#if defined(__x86_64__) || defined(__aarch64__)
+    #define USE_OPEN_BLAS 1
+    #include<cblas.h>
+#else
+    #define USE_OPEN_BLAS 0
+#endif
 
-#define fori(i,n) for(int i = 0; i < n; i++)
-#define pb push_back
+
+// #define fori(i,n) for(int i = 0; i < n; i++)
+// #define pb push_back
 
 //// Compile Time Parameters 
 
@@ -12,6 +18,7 @@
 #define TELEMETRY 1
 #define DEFAULT_LAYER_VERSION 1
 #define INITIAL_LEARNING_RATE 0.05
+
 
 
 #ifdef TELEMETRY
@@ -81,7 +88,8 @@ namespace std
         def_uint_t weight_inp = 0;  
         def_uint_t weight_out = 0;
         // NOTE: 2D weights matrix is stored as as 1D flattened vector expected as row major.
-        vector<def_float_t> weights; // weights[px][py] = weights[px*weight_inp + py]
+        // vector<def_float_t> weights; // weights[px][py] = weights[px*weight_inp + py]
+        vector<def_float_t> weights;
 
         // NOTE: 4D vector of filters is stored as 1D flattened vector expected as row major. Hence all filters must be of same size or need to make new layer for heterogenous sizes.
         def_uint_t num_filters = 0;
@@ -197,54 +205,72 @@ namespace std
             }
         }
 
-        def_uint_t init_weight() {
-            // check current layer type
-            if(this->layer_type != Fully_Connected_INPUTS){
-                return(-1);
-            }
+        def_uint_small_t init_weight(def_uint_small_t random_values) {
+            if(this->layer_type == Fully_Connected_INPUTS){
+                this->weights.clear();
+                this->weights.reserve(weight_inp * weight_out);
 
-            // find the output dimension of every layer in the input_layer array
-            def_int_t input_length = 0;
-
-            for(int i = 0; i < input_layers.size(); i++){
-                auto this_layer = *(input_layers[i]);
-                cout << this_layer.get_id() << endl;
-
-                if(this_layer.layer_type == Fully_Connected_INPUTS){
-                    input_length += this_layer.x;
-                    print_telm("Added from FCLayer +" << this_layer.x << ".");
-                }else if(this_layer.layer_type == Convolutional_INPUTS){
-                    print_telm("Added from CNV layer +" << this_layer.x * this_layer.y * this_layer.z);
-                    input_length += (this_layer.x * this_layer.y * this_layer.z);
-                }else{
-                    print_telm("! - Layer type unexpected when calculating input size.");
+                def_int_t rand_seed = get_rand_float()*1000;
+                
+                for(int i = 0; i < weight_inp * weight_out; i++){
+                    if(random_values){
+                        this->weights[i] = get_rand_float_seeded(rand_seed++);
+                    }else{
+                        this->weights[i] = 0;
+                    }
                 }
             }
-
-            print_telm("Total input size is " << input_length);
-
-            // FIXME:
-            // check if this conforms to the format
-            if(weight_inp > input_length){print_telm("Inputs to this layer lower than before.");}
-            weight_inp = input_length;
-            weight_out = this->x;
-
-            // TODO:
-            // check if current weight matrix contains something already
-            // else
-            
-            weights.clear();
-            weights.resize(weight_inp * weight_out);
-
-            for(int i = 0; i < weight_inp * weight_out; i++){
-                weights[i] = get_rand_float_seeded(i);
-            }
-
-
-            // therefore the x of weight matrix is input_length before multiplication
-            // check if weight_inp <= 
             return 0;
         }
+
+        // def_uint_t init_weight() {
+        //     // check current layer type
+        //     if(this->layer_type != Fully_Connected_INPUTS){
+        //         return(-1);
+        //     }
+
+        //     // find the output dimension of every layer in the input_layer array
+        //     def_int_t input_length = 0;
+
+        //     for(int i = 0; i < input_layers.size(); i++){
+        //         auto this_layer = *(input_layers[i]);
+        //         cout << this_layer.get_id() << endl;
+
+        //         if(this_layer.layer_type == Fully_Connected_INPUTS){
+        //             input_length += this_layer.x;
+        //             print_telm("Added from FCLayer +" << this_layer.x << ".");
+        //         }else if(this_layer.layer_type == Convolutional_INPUTS){
+        //             print_telm("Added from CNV layer +" << this_layer.x * this_layer.y * this_layer.z);
+        //             input_length += (this_layer.x * this_layer.y * this_layer.z);
+        //         }else{
+        //             print_telm("! - Layer type unexpected when calculating input size.");
+        //         }
+        //     }
+
+        //     print_telm("Total input size is " << input_length);
+
+        //     // FIXME:
+        //     // check if this conforms to the format
+        //     if(weight_inp > input_length){print_telm("Inputs to this layer lower than before.");}
+        //     weight_inp = input_length;
+        //     weight_out = this->x;
+
+        //     // TODO:
+        //     // check if current weight matrix contains something already
+        //     // else
+            
+        //     weights.clear();
+        //     weights.resize(weight_inp * weight_out);
+
+        //     for(int i = 0; i < weight_inp * weight_out; i++){
+        //         weights[i] = get_rand_float_seeded(i);
+        //     }
+
+
+        //     // therefore the x of weight matrix is input_length before multiplication
+        //     // check if weight_inp <= 
+        //     return 0;
+        // }
 
         def_uint_small_t auto_resize_weight(def_uint_t preferred_input_size, def_uint_t preferred_output_size){
             if(this->layer_type == Fully_Connected_INPUTS){
@@ -292,24 +318,44 @@ namespace std
 
         vector<def_float_t> get_activation_rec(def_int_t run_id){
             // this is memory in efficient, but faster to implement.
-            if(this->cached_run_id == run_id){
+            if(this->cached_run_id == run_id || this->is_input_layer){  // check whether to return directly from cache if already calculated.
                 if(TELEMETRY) { std::cout << "Result returned from cache. id=" << this->id << " size=" << this->x * this->y * this->z << std::endl;}
                 return cached_acivation_values;
             }
 
-            this->being_evaluated = 1;
+            this->being_evaluated = 1;  // lock flag and prevent cyclic evaluations.
 
             if(this->layer_type == Fully_Connected_INPUTS){
                 // confirm if this layer weights are initialised
-                this->init_weight();
+                if(this->input_layers.size() != weight_inp * weight_out){
+                    // TODO: Make adjust_weight_dimension() to non-destructively handle this. 
+                    this->init_weight(1);
+                }
+                                
                 // build an array of input activation before calculating itself's activation
-                // visit all input_layers and add number of nodes to get their activations
                 vector<def_float_t> input_activations;
 
                 // collect activations of all layers and append to vector input_activations
                 for(int i = 0; i < this->input_layers.size(); i++){
                     vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id);
                     input_activations.insert(input_activations.end(), new_activation.begin(), new_activation.end());
+                }
+
+                if(weight_inp == input_activations.size()){
+                    // do the matrix multiplication
+                    #if USE_OPEN_BLAS
+                        std::vector<def_float_t> output_vector(weight_out);
+
+                        cblas_sgemv(CblasRowMajor, CblasNoTrans, weight_inp, weight_out, 1.0f, weights.data(), weight_out, input_activations.data(), 1, 0.0f, output_vector.data(), 1);
+
+                        return output_vector;
+                    #else
+                        // TODO: Add a fallback code for other platforms
+
+                    #endif
+                }else{
+                    if(TELEMETRY){std::cout << "Weight matrix input size not adjusted for input_activations." << std::endl;}
+                    // TODO: Add support for increasing matrix row or columns 
                 }
 
                 // if(TELEMETRY) { std::cout << "inputs=" << std::endl; }
@@ -324,8 +370,8 @@ namespace std
                 this->being_evaluated = 0;
             }
 
-
-            
+            vector<def_float_t> empty_vector;
+            return empty_vector;
         }
 
         // vector<def_float_t> get_activation(def_int_t run_id){

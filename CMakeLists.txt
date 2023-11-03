@@ -1,6 +1,11 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 
 project(MyProject)
+
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    # Add include directories specific to x86_64, ARMv8, or arm64
+    include_directories(openblas pthread gfortran)
+endif()
 
 add_executable(main main.cpp)
 

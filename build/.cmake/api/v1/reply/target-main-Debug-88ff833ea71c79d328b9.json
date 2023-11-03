@@ -11,7 +11,8 @@
 		"commands" : 
 		[
 			"add_executable",
-			"target_link_directories"
+			"target_link_directories",
+			"include_directories"
 		],
 		"files" : 
 		[
@@ -25,11 +26,17 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 5,
+				"line" : 10,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
+				"file" : 0,
+				"line" : 12,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
 				"file" : 0,
 				"line" : 7,
 				"parent" : 0
@@ -43,6 +50,21 @@
 			[
 				{
 					"fragment" : "-g"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 3,
+					"path" : "/home/aharnish/Documents/Development/ML/Additive-ML/openblas"
+				},
+				{
+					"backtrace" : 3,
+					"path" : "/home/aharnish/Documents/Development/ML/Additive-ML/pthread"
+				},
+				{
+					"backtrace" : 3,
+					"path" : "/home/aharnish/Documents/Development/ML/Additive-ML/gfortran"
 				}
 			],
 			"language" : "CXX",

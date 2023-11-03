@@ -41693,18 +41693,703 @@ namespace std __attribute__ ((__visibility__ ("default")))
 }
 }
 # 4 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp" 2
-# 45 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp"
 
-# 45 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp"
+# 1 "/usr/include/cblas.h" 1 3 4
+
+
+# 1 "/usr/lib/gcc/x86_64-pc-linux-gnu/13.2.1/include/stddef.h" 1 3 4
+# 4 "/usr/include/cblas.h" 2 3 4
+# 1 "/usr/lib/gcc/x86_64-pc-linux-gnu/13.2.1/include/stdint.h" 1 3 4
+# 9 "/usr/lib/gcc/x86_64-pc-linux-gnu/13.2.1/include/stdint.h" 3 4
+# 1 "/usr/include/stdint.h" 1 3 4
+# 26 "/usr/include/stdint.h" 3 4
+# 1 "/usr/include/bits/libc-header-start.h" 1 3 4
+# 27 "/usr/include/stdint.h" 2 3 4
+
+
+# 1 "/usr/include/bits/wordsize.h" 1 3 4
+# 30 "/usr/include/stdint.h" 2 3 4
+
+
+
+
+
+
+
+# 1 "/usr/include/bits/stdint-uintn.h" 1 3 4
+# 24 "/usr/include/bits/stdint-uintn.h" 3 4
+typedef __uint8_t uint8_t;
+typedef __uint16_t uint16_t;
+typedef __uint32_t uint32_t;
+typedef __uint64_t uint64_t;
+# 38 "/usr/include/stdint.h" 2 3 4
+
+
+
+
+
+typedef __int_least8_t int_least8_t;
+typedef __int_least16_t int_least16_t;
+typedef __int_least32_t int_least32_t;
+typedef __int_least64_t int_least64_t;
+
+
+typedef __uint_least8_t uint_least8_t;
+typedef __uint_least16_t uint_least16_t;
+typedef __uint_least32_t uint_least32_t;
+typedef __uint_least64_t uint_least64_t;
+
+
+
+
+
+typedef signed char int_fast8_t;
+
+typedef long int int_fast16_t;
+typedef long int int_fast32_t;
+typedef long int int_fast64_t;
+# 71 "/usr/include/stdint.h" 3 4
+typedef unsigned char uint_fast8_t;
+
+typedef unsigned long int uint_fast16_t;
+typedef unsigned long int uint_fast32_t;
+typedef unsigned long int uint_fast64_t;
+# 87 "/usr/include/stdint.h" 3 4
+typedef long int intptr_t;
+
+
+typedef unsigned long int uintptr_t;
+# 101 "/usr/include/stdint.h" 3 4
+typedef __intmax_t intmax_t;
+typedef __uintmax_t uintmax_t;
+# 10 "/usr/lib/gcc/x86_64-pc-linux-gnu/13.2.1/include/stdint.h" 2 3 4
+# 5 "/usr/include/cblas.h" 2 3 4
+# 1 "/usr/include/inttypes.h" 1 3 4
+# 327 "/usr/include/inttypes.h" 3 4
+extern "C" {
+
+
+
+
+typedef struct
+  {
+    long int quot;
+    long int rem;
+  } imaxdiv_t;
+# 351 "/usr/include/inttypes.h" 3 4
+extern intmax_t imaxabs (intmax_t __n) noexcept (true) __attribute__ ((__const__));
+
+
+extern imaxdiv_t imaxdiv (intmax_t __numer, intmax_t __denom)
+      noexcept (true) __attribute__ ((__const__));
+
+
+extern intmax_t strtoimax (const char *__restrict __nptr,
+      char **__restrict __endptr, int __base) noexcept (true);
+
+
+extern uintmax_t strtoumax (const char *__restrict __nptr,
+       char ** __restrict __endptr, int __base) noexcept (true);
+
+
+extern intmax_t wcstoimax (const wchar_t *__restrict __nptr,
+      wchar_t **__restrict __endptr, int __base)
+     noexcept (true);
+
+
+extern uintmax_t wcstoumax (const wchar_t *__restrict __nptr,
+       wchar_t ** __restrict __endptr, int __base)
+     noexcept (true);
+
+
+
+
+
+extern intmax_t strtoimax (const char *__restrict __nptr, char **__restrict __endptr, int __base) noexcept (true) __asm__ ("" "__isoc23_strtoimax")
+
+                                         ;
+extern uintmax_t strtoumax (const char *__restrict __nptr, char **__restrict __endptr, int __base) noexcept (true) __asm__ ("" "__isoc23_strtoumax")
+
+                                          ;
+extern intmax_t wcstoimax (const wchar_t *__restrict __nptr, wchar_t **__restrict __endptr, int __base) noexcept (true) __asm__ ("" "__isoc23_wcstoimax")
+
+
+                       ;
+extern uintmax_t wcstoumax (const wchar_t *__restrict __nptr, wchar_t **__restrict __endptr, int __base) noexcept (true) __asm__ ("" "__isoc23_wcstoumax")
+
+
+                        ;
+# 415 "/usr/include/inttypes.h" 3 4
+}
+# 6 "/usr/include/cblas.h" 2 3 4
+
+
+
+extern "C" {
+# 39 "/usr/include/cblas.h" 3 4
+typedef enum CBLAS_LAYOUT {CblasRowMajor=101, CblasColMajor=102} CBLAS_LAYOUT;
+typedef enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113} CBLAS_TRANSPOSE;
+typedef enum CBLAS_UPLO {CblasUpper=121, CblasLower=122} CBLAS_UPLO;
+typedef enum CBLAS_DIAG {CblasNonUnit=131, CblasUnit=132} CBLAS_DIAG;
+typedef enum CBLAS_SIDE {CblasLeft=141, CblasRight=142} CBLAS_SIDE;
+
+
+
+# 1 "/usr/include/cblas_mangling.h" 1 3 4
+# 48 "/usr/include/cblas.h" 2 3 4
+
+
+
+
+
+
+
+double cblas_dcabs1(const void *z);
+float cblas_scabs1(const void *c);
+
+float cblas_sdsdot(const int32_t N, const float alpha, const float *X,
+                    const int32_t incX, const float *Y, const int32_t incY);
+double cblas_dsdot(const int32_t N, const float *X, const int32_t incX, const float *Y,
+                   const int32_t incY);
+float cblas_sdot(const int32_t N, const float *X, const int32_t incX,
+                  const float *Y, const int32_t incY);
+double cblas_ddot(const int32_t N, const double *X, const int32_t incX,
+                  const double *Y, const int32_t incY);
+
+
+
+
+void cblas_cdotu_sub(const int32_t N, const void *X, const int32_t incX,
+                       const void *Y, const int32_t incY, void *dotu);
+void cblas_cdotc_sub(const int32_t N, const void *X, const int32_t incX,
+                       const void *Y, const int32_t incY, void *dotc);
+
+void cblas_zdotu_sub(const int32_t N, const void *X, const int32_t incX,
+                       const void *Y, const int32_t incY, void *dotu);
+void cblas_zdotc_sub(const int32_t N, const void *X, const int32_t incX,
+                       const void *Y, const int32_t incY, void *dotc);
+
+
+
+
+
+float cblas_snrm2(const int32_t N, const float *X, const int32_t incX);
+float cblas_sasum(const int32_t N, const float *X, const int32_t incX);
+
+double cblas_dnrm2(const int32_t N, const double *X, const int32_t incX);
+double cblas_dasum(const int32_t N, const double *X, const int32_t incX);
+
+float cblas_scnrm2(const int32_t N, const void *X, const int32_t incX);
+float cblas_scasum(const int32_t N, const void *X, const int32_t incX);
+
+double cblas_dznrm2(const int32_t N, const void *X, const int32_t incX);
+double cblas_dzasum(const int32_t N, const void *X, const int32_t incX);
+
+
+
+
+
+size_t cblas_isamax(const int32_t N, const float *X, const int32_t incX);
+size_t cblas_idamax(const int32_t N, const double *X, const int32_t incX);
+size_t cblas_icamax(const int32_t N, const void *X, const int32_t incX);
+size_t cblas_izamax(const int32_t N, const void *X, const int32_t incX);
+# 114 "/usr/include/cblas.h" 3 4
+void cblas_sswap(const int32_t N, float *X, const int32_t incX,
+                 float *Y, const int32_t incY);
+void cblas_scopy(const int32_t N, const float *X, const int32_t incX,
+                 float *Y, const int32_t incY);
+void cblas_saxpy(const int32_t N, const float alpha, const float *X,
+                 const int32_t incX, float *Y, const int32_t incY);
+
+void cblas_dswap(const int32_t N, double *X, const int32_t incX,
+                 double *Y, const int32_t incY);
+void cblas_dcopy(const int32_t N, const double *X, const int32_t incX,
+                 double *Y, const int32_t incY);
+void cblas_daxpy(const int32_t N, const double alpha, const double *X,
+                 const int32_t incX, double *Y, const int32_t incY);
+
+void cblas_cswap(const int32_t N, void *X, const int32_t incX,
+                 void *Y, const int32_t incY);
+void cblas_ccopy(const int32_t N, const void *X, const int32_t incX,
+                 void *Y, const int32_t incY);
+void cblas_caxpy(const int32_t N, const void *alpha, const void *X,
+                 const int32_t incX, void *Y, const int32_t incY);
+
+void cblas_zswap(const int32_t N, void *X, const int32_t incX,
+                 void *Y, const int32_t incY);
+void cblas_zcopy(const int32_t N, const void *X, const int32_t incX,
+                 void *Y, const int32_t incY);
+void cblas_zaxpy(const int32_t N, const void *alpha, const void *X,
+                 const int32_t incX, void *Y, const int32_t incY);
+
+
+
+
+
+void cblas_srotmg(float *d1, float *d2, float *b1, const float b2, float *P);
+void cblas_srotm(const int32_t N, float *X, const int32_t incX,
+                 float *Y, const int32_t incY, const float *P);
+void cblas_drotmg(double *d1, double *d2, double *b1, const double b2, double *P);
+void cblas_drotm(const int32_t N, double *X, const int32_t incX,
+                 double *Y, const int32_t incY, const double *P);
+
+
+
+
+
+
+void cblas_sscal(const int32_t N, const float alpha, float *X, const int32_t incX);
+void cblas_dscal(const int32_t N, const double alpha, double *X, const int32_t incX);
+void cblas_cscal(const int32_t N, const void *alpha, void *X, const int32_t incX);
+void cblas_zscal(const int32_t N, const void *alpha, void *X, const int32_t incX);
+void cblas_csscal(const int32_t N, const float alpha, void *X, const int32_t incX);
+void cblas_zdscal(const int32_t N, const double alpha, void *X, const int32_t incX);
+
+void cblas_srotg(float *a, float *b, float *c, float *s);
+void cblas_drotg(double *a, double *b, double *c, double *s);
+void cblas_crotg(void *a, void *b, float *c, void *s);
+void cblas_zrotg(void *a, void *b, double *c, void *s);
+
+void cblas_srot(const int32_t N, float *X, const int32_t incX,
+                float *Y, const int32_t incY, const float c, const float s);
+void cblas_drot(const int32_t N, double *X, const int32_t incX,
+                double *Y, const int32_t incY, const double c, const double s);
+void cblas_csrot(const int32_t N, void *X, const int32_t incX,
+                 void *Y, const int32_t incY, const float c, const float s);
+void cblas_zdrot(const int32_t N, void *X, const int32_t incX,
+                 void *Y, const int32_t incY, const double c, const double s);
+# 188 "/usr/include/cblas.h" 3 4
+void cblas_sgemv(const CBLAS_LAYOUT layout,
+                 const CBLAS_TRANSPOSE TransA, const int32_t M, const int32_t N,
+                 const float alpha, const float *A, const int32_t lda,
+                 const float *X, const int32_t incX, const float beta,
+                 float *Y, const int32_t incY);
+void cblas_sgbmv(CBLAS_LAYOUT layout,
+                 CBLAS_TRANSPOSE TransA, const int32_t M, const int32_t N,
+                 const int32_t KL, const int32_t KU, const float alpha,
+                 const float *A, const int32_t lda, const float *X,
+                 const int32_t incX, const float beta, float *Y, const int32_t incY);
+void cblas_strmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const float *A, const int32_t lda,
+                 float *X, const int32_t incX);
+void cblas_stbmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const int32_t K, const float *A, const int32_t lda,
+                 float *X, const int32_t incX);
+void cblas_stpmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const float *Ap, float *X, const int32_t incX);
+void cblas_strsv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const float *A, const int32_t lda, float *X,
+                 const int32_t incX);
+void cblas_stbsv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const int32_t K, const float *A, const int32_t lda,
+                 float *X, const int32_t incX);
+void cblas_stpsv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const float *Ap, float *X, const int32_t incX);
+
+void cblas_dgemv(CBLAS_LAYOUT layout,
+                 CBLAS_TRANSPOSE TransA, const int32_t M, const int32_t N,
+                 const double alpha, const double *A, const int32_t lda,
+                 const double *X, const int32_t incX, const double beta,
+                 double *Y, const int32_t incY);
+void cblas_dgbmv(CBLAS_LAYOUT layout,
+                 CBLAS_TRANSPOSE TransA, const int32_t M, const int32_t N,
+                 const int32_t KL, const int32_t KU, const double alpha,
+                 const double *A, const int32_t lda, const double *X,
+                 const int32_t incX, const double beta, double *Y, const int32_t incY);
+void cblas_dtrmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const double *A, const int32_t lda,
+                 double *X, const int32_t incX);
+void cblas_dtbmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const int32_t K, const double *A, const int32_t lda,
+                 double *X, const int32_t incX);
+void cblas_dtpmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const double *Ap, double *X, const int32_t incX);
+void cblas_dtrsv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const double *A, const int32_t lda, double *X,
+                 const int32_t incX);
+void cblas_dtbsv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const int32_t K, const double *A, const int32_t lda,
+                 double *X, const int32_t incX);
+void cblas_dtpsv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const double *Ap, double *X, const int32_t incX);
+
+void cblas_cgemv(CBLAS_LAYOUT layout,
+                 CBLAS_TRANSPOSE TransA, const int32_t M, const int32_t N,
+                 const void *alpha, const void *A, const int32_t lda,
+                 const void *X, const int32_t incX, const void *beta,
+                 void *Y, const int32_t incY);
+void cblas_cgbmv(CBLAS_LAYOUT layout,
+                 CBLAS_TRANSPOSE TransA, const int32_t M, const int32_t N,
+                 const int32_t KL, const int32_t KU, const void *alpha,
+                 const void *A, const int32_t lda, const void *X,
+                 const int32_t incX, const void *beta, void *Y, const int32_t incY);
+void cblas_ctrmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const void *A, const int32_t lda,
+                 void *X, const int32_t incX);
+void cblas_ctbmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const int32_t K, const void *A, const int32_t lda,
+                 void *X, const int32_t incX);
+void cblas_ctpmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const void *Ap, void *X, const int32_t incX);
+void cblas_ctrsv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const void *A, const int32_t lda, void *X,
+                 const int32_t incX);
+void cblas_ctbsv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const int32_t K, const void *A, const int32_t lda,
+                 void *X, const int32_t incX);
+void cblas_ctpsv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const void *Ap, void *X, const int32_t incX);
+
+void cblas_zgemv(CBLAS_LAYOUT layout,
+                 CBLAS_TRANSPOSE TransA, const int32_t M, const int32_t N,
+                 const void *alpha, const void *A, const int32_t lda,
+                 const void *X, const int32_t incX, const void *beta,
+                 void *Y, const int32_t incY);
+void cblas_zgbmv(CBLAS_LAYOUT layout,
+                 CBLAS_TRANSPOSE TransA, const int32_t M, const int32_t N,
+                 const int32_t KL, const int32_t KU, const void *alpha,
+                 const void *A, const int32_t lda, const void *X,
+                 const int32_t incX, const void *beta, void *Y, const int32_t incY);
+void cblas_ztrmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const void *A, const int32_t lda,
+                 void *X, const int32_t incX);
+void cblas_ztbmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const int32_t K, const void *A, const int32_t lda,
+                 void *X, const int32_t incX);
+void cblas_ztpmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const void *Ap, void *X, const int32_t incX);
+void cblas_ztrsv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const void *A, const int32_t lda, void *X,
+                 const int32_t incX);
+void cblas_ztbsv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const int32_t K, const void *A, const int32_t lda,
+                 void *X, const int32_t incX);
+void cblas_ztpsv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE TransA, CBLAS_DIAG Diag,
+                 const int32_t N, const void *Ap, void *X, const int32_t incX);
+
+
+
+
+
+void cblas_ssymv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 const int32_t N, const float alpha, const float *A,
+                 const int32_t lda, const float *X, const int32_t incX,
+                 const float beta, float *Y, const int32_t incY);
+void cblas_ssbmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 const int32_t N, const int32_t K, const float alpha, const float *A,
+                 const int32_t lda, const float *X, const int32_t incX,
+                 const float beta, float *Y, const int32_t incY);
+void cblas_sspmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 const int32_t N, const float alpha, const float *Ap,
+                 const float *X, const int32_t incX,
+                 const float beta, float *Y, const int32_t incY);
+void cblas_sger(CBLAS_LAYOUT layout, const int32_t M, const int32_t N,
+                const float alpha, const float *X, const int32_t incX,
+                const float *Y, const int32_t incY, float *A, const int32_t lda);
+void cblas_ssyr(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                const int32_t N, const float alpha, const float *X,
+                const int32_t incX, float *A, const int32_t lda);
+void cblas_sspr(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                const int32_t N, const float alpha, const float *X,
+                const int32_t incX, float *Ap);
+void cblas_ssyr2(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                const int32_t N, const float alpha, const float *X,
+                const int32_t incX, const float *Y, const int32_t incY, float *A,
+                const int32_t lda);
+void cblas_sspr2(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                const int32_t N, const float alpha, const float *X,
+                const int32_t incX, const float *Y, const int32_t incY, float *A);
+
+void cblas_dsymv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 const int32_t N, const double alpha, const double *A,
+                 const int32_t lda, const double *X, const int32_t incX,
+                 const double beta, double *Y, const int32_t incY);
+void cblas_dsbmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 const int32_t N, const int32_t K, const double alpha, const double *A,
+                 const int32_t lda, const double *X, const int32_t incX,
+                 const double beta, double *Y, const int32_t incY);
+void cblas_dspmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 const int32_t N, const double alpha, const double *Ap,
+                 const double *X, const int32_t incX,
+                 const double beta, double *Y, const int32_t incY);
+void cblas_dger(CBLAS_LAYOUT layout, const int32_t M, const int32_t N,
+                const double alpha, const double *X, const int32_t incX,
+                const double *Y, const int32_t incY, double *A, const int32_t lda);
+void cblas_dsyr(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                const int32_t N, const double alpha, const double *X,
+                const int32_t incX, double *A, const int32_t lda);
+void cblas_dspr(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                const int32_t N, const double alpha, const double *X,
+                const int32_t incX, double *Ap);
+void cblas_dsyr2(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                const int32_t N, const double alpha, const double *X,
+                const int32_t incX, const double *Y, const int32_t incY, double *A,
+                const int32_t lda);
+void cblas_dspr2(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                const int32_t N, const double alpha, const double *X,
+                const int32_t incX, const double *Y, const int32_t incY, double *A);
+
+
+
+
+
+void cblas_chemv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 const int32_t N, const void *alpha, const void *A,
+                 const int32_t lda, const void *X, const int32_t incX,
+                 const void *beta, void *Y, const int32_t incY);
+void cblas_chbmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 const int32_t N, const int32_t K, const void *alpha, const void *A,
+                 const int32_t lda, const void *X, const int32_t incX,
+                 const void *beta, void *Y, const int32_t incY);
+void cblas_chpmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 const int32_t N, const void *alpha, const void *Ap,
+                 const void *X, const int32_t incX,
+                 const void *beta, void *Y, const int32_t incY);
+void cblas_cgeru(CBLAS_LAYOUT layout, const int32_t M, const int32_t N,
+                 const void *alpha, const void *X, const int32_t incX,
+                 const void *Y, const int32_t incY, void *A, const int32_t lda);
+void cblas_cgerc(CBLAS_LAYOUT layout, const int32_t M, const int32_t N,
+                 const void *alpha, const void *X, const int32_t incX,
+                 const void *Y, const int32_t incY, void *A, const int32_t lda);
+void cblas_cher(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                const int32_t N, const float alpha, const void *X, const int32_t incX,
+                void *A, const int32_t lda);
+void cblas_chpr(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                const int32_t N, const float alpha, const void *X,
+                const int32_t incX, void *A);
+void cblas_cher2(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo, const int32_t N,
+                const void *alpha, const void *X, const int32_t incX,
+                const void *Y, const int32_t incY, void *A, const int32_t lda);
+void cblas_chpr2(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo, const int32_t N,
+                const void *alpha, const void *X, const int32_t incX,
+                const void *Y, const int32_t incY, void *Ap);
+
+void cblas_zhemv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 const int32_t N, const void *alpha, const void *A,
+                 const int32_t lda, const void *X, const int32_t incX,
+                 const void *beta, void *Y, const int32_t incY);
+void cblas_zhbmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 const int32_t N, const int32_t K, const void *alpha, const void *A,
+                 const int32_t lda, const void *X, const int32_t incX,
+                 const void *beta, void *Y, const int32_t incY);
+void cblas_zhpmv(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 const int32_t N, const void *alpha, const void *Ap,
+                 const void *X, const int32_t incX,
+                 const void *beta, void *Y, const int32_t incY);
+void cblas_zgeru(CBLAS_LAYOUT layout, const int32_t M, const int32_t N,
+                 const void *alpha, const void *X, const int32_t incX,
+                 const void *Y, const int32_t incY, void *A, const int32_t lda);
+void cblas_zgerc(CBLAS_LAYOUT layout, const int32_t M, const int32_t N,
+                 const void *alpha, const void *X, const int32_t incX,
+                 const void *Y, const int32_t incY, void *A, const int32_t lda);
+void cblas_zher(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                const int32_t N, const double alpha, const void *X, const int32_t incX,
+                void *A, const int32_t lda);
+void cblas_zhpr(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                const int32_t N, const double alpha, const void *X,
+                const int32_t incX, void *A);
+void cblas_zher2(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo, const int32_t N,
+                const void *alpha, const void *X, const int32_t incX,
+                const void *Y, const int32_t incY, void *A, const int32_t lda);
+void cblas_zhpr2(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo, const int32_t N,
+                const void *alpha, const void *X, const int32_t incX,
+                const void *Y, const int32_t incY, void *Ap);
+# 457 "/usr/include/cblas.h" 3 4
+void cblas_sgemm(CBLAS_LAYOUT layout, CBLAS_TRANSPOSE TransA,
+                 CBLAS_TRANSPOSE TransB, const int32_t M, const int32_t N,
+                 const int32_t K, const float alpha, const float *A,
+                 const int32_t lda, const float *B, const int32_t ldb,
+                 const float beta, float *C, const int32_t ldc);
+void cblas_ssymm(CBLAS_LAYOUT layout, CBLAS_SIDE Side,
+                 CBLAS_UPLO Uplo, const int32_t M, const int32_t N,
+                 const float alpha, const float *A, const int32_t lda,
+                 const float *B, const int32_t ldb, const float beta,
+                 float *C, const int32_t ldc);
+void cblas_ssyrk(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE Trans, const int32_t N, const int32_t K,
+                 const float alpha, const float *A, const int32_t lda,
+                 const float beta, float *C, const int32_t ldc);
+void cblas_ssyr2k(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                  CBLAS_TRANSPOSE Trans, const int32_t N, const int32_t K,
+                  const float alpha, const float *A, const int32_t lda,
+                  const float *B, const int32_t ldb, const float beta,
+                  float *C, const int32_t ldc);
+void cblas_strmm(CBLAS_LAYOUT layout, CBLAS_SIDE Side,
+                 CBLAS_UPLO Uplo, CBLAS_TRANSPOSE TransA,
+                 CBLAS_DIAG Diag, const int32_t M, const int32_t N,
+                 const float alpha, const float *A, const int32_t lda,
+                 float *B, const int32_t ldb);
+void cblas_strsm(CBLAS_LAYOUT layout, CBLAS_SIDE Side,
+                 CBLAS_UPLO Uplo, CBLAS_TRANSPOSE TransA,
+                 CBLAS_DIAG Diag, const int32_t M, const int32_t N,
+                 const float alpha, const float *A, const int32_t lda,
+                 float *B, const int32_t ldb);
+
+void cblas_dgemm(CBLAS_LAYOUT layout, CBLAS_TRANSPOSE TransA,
+                 CBLAS_TRANSPOSE TransB, const int32_t M, const int32_t N,
+                 const int32_t K, const double alpha, const double *A,
+                 const int32_t lda, const double *B, const int32_t ldb,
+                 const double beta, double *C, const int32_t ldc);
+void cblas_dsymm(CBLAS_LAYOUT layout, CBLAS_SIDE Side,
+                 CBLAS_UPLO Uplo, const int32_t M, const int32_t N,
+                 const double alpha, const double *A, const int32_t lda,
+                 const double *B, const int32_t ldb, const double beta,
+                 double *C, const int32_t ldc);
+void cblas_dsyrk(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE Trans, const int32_t N, const int32_t K,
+                 const double alpha, const double *A, const int32_t lda,
+                 const double beta, double *C, const int32_t ldc);
+void cblas_dsyr2k(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                  CBLAS_TRANSPOSE Trans, const int32_t N, const int32_t K,
+                  const double alpha, const double *A, const int32_t lda,
+                  const double *B, const int32_t ldb, const double beta,
+                  double *C, const int32_t ldc);
+void cblas_dtrmm(CBLAS_LAYOUT layout, CBLAS_SIDE Side,
+                 CBLAS_UPLO Uplo, CBLAS_TRANSPOSE TransA,
+                 CBLAS_DIAG Diag, const int32_t M, const int32_t N,
+                 const double alpha, const double *A, const int32_t lda,
+                 double *B, const int32_t ldb);
+void cblas_dtrsm(CBLAS_LAYOUT layout, CBLAS_SIDE Side,
+                 CBLAS_UPLO Uplo, CBLAS_TRANSPOSE TransA,
+                 CBLAS_DIAG Diag, const int32_t M, const int32_t N,
+                 const double alpha, const double *A, const int32_t lda,
+                 double *B, const int32_t ldb);
+
+void cblas_cgemm(CBLAS_LAYOUT layout, CBLAS_TRANSPOSE TransA,
+                 CBLAS_TRANSPOSE TransB, const int32_t M, const int32_t N,
+                 const int32_t K, const void *alpha, const void *A,
+                 const int32_t lda, const void *B, const int32_t ldb,
+                 const void *beta, void *C, const int32_t ldc);
+void cblas_csymm(CBLAS_LAYOUT layout, CBLAS_SIDE Side,
+                 CBLAS_UPLO Uplo, const int32_t M, const int32_t N,
+                 const void *alpha, const void *A, const int32_t lda,
+                 const void *B, const int32_t ldb, const void *beta,
+                 void *C, const int32_t ldc);
+void cblas_csyrk(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE Trans, const int32_t N, const int32_t K,
+                 const void *alpha, const void *A, const int32_t lda,
+                 const void *beta, void *C, const int32_t ldc);
+void cblas_csyr2k(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                  CBLAS_TRANSPOSE Trans, const int32_t N, const int32_t K,
+                  const void *alpha, const void *A, const int32_t lda,
+                  const void *B, const int32_t ldb, const void *beta,
+                  void *C, const int32_t ldc);
+void cblas_ctrmm(CBLAS_LAYOUT layout, CBLAS_SIDE Side,
+                 CBLAS_UPLO Uplo, CBLAS_TRANSPOSE TransA,
+                 CBLAS_DIAG Diag, const int32_t M, const int32_t N,
+                 const void *alpha, const void *A, const int32_t lda,
+                 void *B, const int32_t ldb);
+void cblas_ctrsm(CBLAS_LAYOUT layout, CBLAS_SIDE Side,
+                 CBLAS_UPLO Uplo, CBLAS_TRANSPOSE TransA,
+                 CBLAS_DIAG Diag, const int32_t M, const int32_t N,
+                 const void *alpha, const void *A, const int32_t lda,
+                 void *B, const int32_t ldb);
+
+void cblas_zgemm(CBLAS_LAYOUT layout, CBLAS_TRANSPOSE TransA,
+                 CBLAS_TRANSPOSE TransB, const int32_t M, const int32_t N,
+                 const int32_t K, const void *alpha, const void *A,
+                 const int32_t lda, const void *B, const int32_t ldb,
+                 const void *beta, void *C, const int32_t ldc);
+void cblas_zsymm(CBLAS_LAYOUT layout, CBLAS_SIDE Side,
+                 CBLAS_UPLO Uplo, const int32_t M, const int32_t N,
+                 const void *alpha, const void *A, const int32_t lda,
+                 const void *B, const int32_t ldb, const void *beta,
+                 void *C, const int32_t ldc);
+void cblas_zsyrk(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE Trans, const int32_t N, const int32_t K,
+                 const void *alpha, const void *A, const int32_t lda,
+                 const void *beta, void *C, const int32_t ldc);
+void cblas_zsyr2k(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                  CBLAS_TRANSPOSE Trans, const int32_t N, const int32_t K,
+                  const void *alpha, const void *A, const int32_t lda,
+                  const void *B, const int32_t ldb, const void *beta,
+                  void *C, const int32_t ldc);
+void cblas_ztrmm(CBLAS_LAYOUT layout, CBLAS_SIDE Side,
+                 CBLAS_UPLO Uplo, CBLAS_TRANSPOSE TransA,
+                 CBLAS_DIAG Diag, const int32_t M, const int32_t N,
+                 const void *alpha, const void *A, const int32_t lda,
+                 void *B, const int32_t ldb);
+void cblas_ztrsm(CBLAS_LAYOUT layout, CBLAS_SIDE Side,
+                 CBLAS_UPLO Uplo, CBLAS_TRANSPOSE TransA,
+                 CBLAS_DIAG Diag, const int32_t M, const int32_t N,
+                 const void *alpha, const void *A, const int32_t lda,
+                 void *B, const int32_t ldb);
+
+
+
+
+
+void cblas_chemm(CBLAS_LAYOUT layout, CBLAS_SIDE Side,
+                 CBLAS_UPLO Uplo, const int32_t M, const int32_t N,
+                 const void *alpha, const void *A, const int32_t lda,
+                 const void *B, const int32_t ldb, const void *beta,
+                 void *C, const int32_t ldc);
+void cblas_cherk(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE Trans, const int32_t N, const int32_t K,
+                 const float alpha, const void *A, const int32_t lda,
+                 const float beta, void *C, const int32_t ldc);
+void cblas_cher2k(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                  CBLAS_TRANSPOSE Trans, const int32_t N, const int32_t K,
+                  const void *alpha, const void *A, const int32_t lda,
+                  const void *B, const int32_t ldb, const float beta,
+                  void *C, const int32_t ldc);
+
+void cblas_zhemm(CBLAS_LAYOUT layout, CBLAS_SIDE Side,
+                 CBLAS_UPLO Uplo, const int32_t M, const int32_t N,
+                 const void *alpha, const void *A, const int32_t lda,
+                 const void *B, const int32_t ldb, const void *beta,
+                 void *C, const int32_t ldc);
+void cblas_zherk(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                 CBLAS_TRANSPOSE Trans, const int32_t N, const int32_t K,
+                 const double alpha, const void *A, const int32_t lda,
+                 const double beta, void *C, const int32_t ldc);
+void cblas_zher2k(CBLAS_LAYOUT layout, CBLAS_UPLO Uplo,
+                  CBLAS_TRANSPOSE Trans, const int32_t N, const int32_t K,
+                  const void *alpha, const void *A, const int32_t lda,
+                  const void *B, const int32_t ldb, const double beta,
+                  void *C, const int32_t ldc);
+
+void cblas_xerbla(int32_t p, const char *rout, const char *form, ...);
+
+
+}
+# 6 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp" 2
+# 49 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp"
+
+# 49 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp"
 float get_rand_float(){ srand(time(0)); return ( (float)(rand()) / (float)(
-# 45 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp" 3 4
+# 49 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp" 3 4
                                                                                 2147483647
-# 45 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp"
+# 49 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp"
                                                                                         ) ); }
 float get_rand_float_seeded(unsigned int seed){ srand(seed); return ( (float)(rand()) / (float)(
-# 46 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp" 3 4
+# 50 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp" 3 4
                                                                                                      2147483647
-# 46 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp"
+# 50 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp"
                                                                                                              ) ); }
 
 
@@ -41781,7 +42466,7 @@ namespace std
 
 
         vector<float> cached_acivation_values;
-# 131 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp"
+# 135 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp"
         unsigned char being_evaluated = 0;
         unsigned char being_corrected = 0;
 
@@ -41802,7 +42487,7 @@ namespace std
 
             this->is_dynamic_layer = 1;
         }
-# 164 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp"
+# 168 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp"
         nlayer(short unsigned int x, short unsigned int y, short unsigned int z, short unsigned int activationFn)
         {
             this->layer_type = 1;
@@ -41954,6 +42639,10 @@ namespace std
                     input_activations.insert(input_activations.end(), new_activation.begin(), new_activation.end());
                 }
 
+                if(weight_inp == input_activations.size()){
+
+                }
+
 
 
 
@@ -41969,7 +42658,7 @@ namespace std
 
 
         }
-# 435 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp"
+# 443 "/home/aharnish/Documents/Development/ML/Additive-ML/modules/nlayer.cpp"
     };
 
 
@@ -41978,6 +42667,9 @@ namespace std
 
 }
 # 6 "/home/aharnish/Documents/Development/ML/Additive-ML/main.cpp" 2
+
+
+
 
 
 int main(){
@@ -42007,7 +42699,19 @@ int main(){
     layer1.weight_out = 4;
 
 
+    std::cout << "layer1 size = " << layer1.input_layers.size() << std::endl;
+
     layer1.init_weight();
-# 57 "/home/aharnish/Documents/Development/ML/Additive-ML/main.cpp"
+
+
+    std::cout << "Printing Weights" << std::endl;
+
+    for(int i = 0; i < layer1.weight_inp; i++){
+        for(int j = 0; j < layer1.weight_out; j++){
+            std::cout << layer1.get_weight_value(i,j) << " ";
+        }
+        std::cout << std::endl;
+    }
+# 75 "/home/aharnish/Documents/Development/ML/Additive-ML/main.cpp"
     return 0;
 }
