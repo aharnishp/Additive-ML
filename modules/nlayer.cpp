@@ -1,8 +1,10 @@
 #include "nlayer.hpp"
 
-#include<cstring>
+#include <cmath>
+#include <cstring>
+
 #if defined(__x86_64__) || defined(__aarch64__)
-    #define USE_OPEN_BLAS 0    // previously = 1
+    #define USE_OPEN_BLAS 1    // previously = 1
     #include<cblas.h>
 #else
     #define USE_OPEN_BLAS 0
@@ -32,6 +34,7 @@
 
 
 
+
 // Static Defines Below
 
 // cached_run_states
@@ -39,10 +42,10 @@
 #define initiated_cache_state 1
 
 // Activation Functions
-#define Linear_activation_state 0
-#define ReLU_activation_state 1
-#define Sigmoid_activation_state 2
-#define Exponential_activation_state 3
+// #define Linear_activation_state 0
+// #define ReLU_activation_state 1
+// #define Sigmoid_activation_state 2
+// #define Exponential_activation_state 3
 
 
 // Layer types
@@ -109,7 +112,7 @@ namespace std
             // 1 = Linear
             // 2 = sigmoid
             // 3 = exponential
-        def_uint_t activationFn = 0;
+        activation_fn_t activationFn = ReLU;
 
         def_float_t learningRate = INITIAL_LEARNING_RATE;
 
@@ -146,7 +149,7 @@ namespace std
 
         nlayer(){};
 
-        nlayer(def_uint_t x, def_uint_t y, def_uint_t z, def_uint_t activationFn, def_float_t learningRate)
+        nlayer(def_uint_t x, def_uint_t y, def_uint_t z, activation_fn_t activationFn, def_float_t learningRate)
         {
             this->layer_type = Convolutional_INPUTS;
             this->x = x;
@@ -170,7 +173,7 @@ namespace std
         //     this->is_dynamic_layer = 1;
         // }
 
-        nlayer(def_uint_t x, def_uint_t y, def_uint_t z, def_uint_t activationFn)
+        nlayer(def_uint_t x, def_uint_t y, def_uint_t z, activation_fn_t activationFn)
         {
             this->layer_type = Convolutional_INPUTS;
             this->x = x;
@@ -182,12 +185,12 @@ namespace std
             this->is_dynamic_layer = 1;
         }
 
-        nlayer(def_uint_t x, def_uint_t activationFn, def_float_t learningRate)
+        nlayer(def_uint_t x, activation_fn_t activation_fn, def_float_t learningRate)
         {
             this->x = x;
             this->y = 1;
             this->z = 1;
-            this->activationFn = activationFn;
+            this->activationFn = activation_fn;
             this->learningRate = learningRate;
             // this->layerVersion = DEFAULT_LAYER_VERSION;
             this->is_dynamic_layer = 1;
@@ -223,6 +226,33 @@ namespace std
             }
             return 0;
         }
+
+        void apply_activation_fn(std::vector<def_float_t>& input_vector){
+            if(this->activationFn == ReLU){
+                #ifdef USE_OPEN_BLAS
+                    cblas_smax(0.0f, input_vector.data(), 1, input_vector.size());
+                #endif
+            }
+            
+        }
+
+        // std::vector<def_float_t> get_activation_Fn_value(std::vector<def_float_t> input){
+        //     if(this->activationFn == ReLU){
+        //         if(input > 0){
+        //             return input;
+        //         }else{
+        //             return 0;
+        //         }
+        //     }else if(this->activationFn == Linear){
+        //         return input;
+        //     }else if(this->activationFn == Sigmoid){
+        //         return (1/(1+exp(-input)));
+        //     }else if(this->activationFn == Exponential){
+        //         return exp(input);
+        //     }else{
+        //         return input;
+        //     }
+        // }
 
         // def_uint_t init_weight() {
         //     // check current layer type
@@ -313,7 +343,7 @@ namespace std
         }
 
 
-        void set_activation_fn(def_uint_t new_activation_fn){
+        void set_activation_fn(activation_fn_t new_activation_fn){
             this->activationFn = new_activation_fn;
         }
 
@@ -377,26 +407,31 @@ namespace std
                             }
                         }
 
-
-
-
                     #endif
-                        if(TELEMETRY){
-                            std::cout << "Input Values" << std::endl;
-                            for(int i = 0; i < input_activations.size(); i++){
-                                std::cout << input_activations[i] << " ";
-                            }
-                            std::cout << std::endl;
 
 
-                            std::cout << "Output Values" << std::endl;
-                            for(int i = 0; i < output_vector.size(); i++){
-                                std::cout << output_vector[i] << " ";
-                            }
-                            std::cout << std::endl;
+                    // apply activation function
+                    // output_vector = get_activation_Fn_value(output_vector);
+                    apply_activation_fn(output_vector);
+
+                    if(TELEMETRY){
+                        std::cout << "Input Values" << std::endl;
+                        for(int i = 0; i < input_activations.size(); i++){
+                            std::cout << input_activations[i] << " ";
                         }
+                        std::cout << std::endl;
 
-                        return output_vector;
+
+                        std::cout << "Output Values" << std::endl;
+                        for(int i = 0; i < output_vector.size(); i++){
+                            std::cout << output_vector[i] << " ";
+                        }
+                        std::cout << std::endl;
+                    }
+
+                    this->being_evaluated = 0;
+
+                    return output_vector;
 
                 }else{
                     if(TELEMETRY){std::cout << "Weight matrix input size not adjusted for input_activations." << std::endl;}
@@ -415,8 +450,30 @@ namespace std
                 this->being_evaluated = 0;
             }
 
-            vector<def_float_t> empty_vector;
+
+            // error case
+            vector<def_float_t> empty_vector = {-1};
             return empty_vector;
+        }
+
+        vector<def_float_t> get_correct_error_rec(def_int_t run_id, def_uint_t batch_size, vector<def_float_t> activation_error){
+            if(!(this->being_corrected)){
+                this->being_corrected = 1;
+            }else{
+                return(this->cached_acivation_values);
+            }
+
+            if(this->layer_type == Fully_Connected_INPUTS){
+                // check if backprop errors are fresh, otherwise, wrong errors will be calculated.
+                if(this->cached_run_id == run_id){
+                    
+
+                }
+            }
+
+            
+            
+            this->being_corrected = 0;
         }
 
         // vector<def_float_t> get_activation(def_int_t run_id){

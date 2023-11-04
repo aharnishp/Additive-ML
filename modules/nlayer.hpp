@@ -20,6 +20,21 @@
   #define def_int_t __INT32_TYPE__
 #endif
 
+// Activation Function Codes
+// enum activationFn{
+//     ReLU = 0,
+//     Linear = 1,
+//     Sigmoid = 2,
+//     Exponential = 3
+// };
+
+typedef enum {
+    ReLU = 0,
+    Linear = 1,
+    Sigmoid = 2,
+    Exponential = 3
+} activation_fn_t;
+
 
 class nlayer{
       public:
