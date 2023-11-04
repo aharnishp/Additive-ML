@@ -2,7 +2,7 @@
 
 #include<cstring>
 #if defined(__x86_64__) || defined(__aarch64__)
-    #define USE_OPEN_BLAS 1
+    #define USE_OPEN_BLAS 0    // previously = 1
     #include<cblas.h>
 #else
     #define USE_OPEN_BLAS 0
@@ -88,7 +88,7 @@ namespace std
         def_uint_t weight_inp = 0;  
         def_uint_t weight_out = 0;
         // NOTE: 2D weights matrix is stored as as 1D flattened vector expected as row major.
-        // vector<def_float_t> weights; // weights[px][py] = weights[px*weight_inp + py]
+        // vector<def_float_t> weights; // weights[px][py] = weights[px*weight_out + py]
         vector<def_float_t> weights;
 
         // NOTE: 4D vector of filters is stored as 1D flattened vector expected as row major. Hence all filters must be of same size or need to make new layer for heterogenous sizes.
@@ -120,6 +120,7 @@ namespace std
 
         // stores run_id when it this layer's last activation was calculated
         def_int_t cached_run_id = 0;
+        def_uint_t cached_batch_size = 1;    // store the batch size of the input
 
         // FIXME:
         // stores the value of last activation
@@ -196,7 +197,7 @@ namespace std
         def_float_t get_weight_value(def_uint_t px, def_uint_t py){
             if(layer_type==Fully_Connected_INPUTS){
                 if(px < weight_inp && py < weight_out){
-                    return (weights[px*weight_inp + py]);
+                    return (weights[px*weight_out + py]);
                 }else{
                     return (-1);
                 }
@@ -316,7 +317,7 @@ namespace std
             this->activationFn = new_activation_fn;
         }
 
-        vector<def_float_t> get_activation_rec(def_int_t run_id){
+        vector<def_float_t> get_activation_rec(def_int_t run_id, def_uint_t batch_size){
             // this is memory in efficient, but faster to implement.
             if(this->cached_run_id == run_id || this->is_input_layer){  // check whether to return directly from cache if already calculated.
                 if(TELEMETRY) { std::cout << "Result returned from cache. id=" << this->id << " size=" << this->x * this->y * this->z << std::endl;}
@@ -327,7 +328,7 @@ namespace std
 
             if(this->layer_type == Fully_Connected_INPUTS){
                 // confirm if this layer weights are initialised
-                if(this->input_layers.size() != weight_inp * weight_out){
+                if(this->weights.size() != weight_inp * weight_out){
                     // TODO: Make adjust_weight_dimension() to non-destructively handle this. 
                     this->init_weight(1);
                 }
@@ -337,23 +338,66 @@ namespace std
 
                 // collect activations of all layers and append to vector input_activations
                 for(int i = 0; i < this->input_layers.size(); i++){
-                    vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id);
+                    vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id, batch_size);
                     input_activations.insert(input_activations.end(), new_activation.begin(), new_activation.end());
                 }
 
-                if(weight_inp == input_activations.size()){
+                if(input_activations.size() == weight_inp*batch_size){
                     // do the matrix multiplication
+                        std::vector<def_float_t> output_vector(weight_out*batch_size);
                     #if USE_OPEN_BLAS
-                        std::vector<def_float_t> output_vector(weight_out);
 
-                        cblas_sgemv(CblasRowMajor, CblasNoTrans, weight_inp, weight_out, 1.0f, weights.data(), weight_out, input_activations.data(), 1, 0.0f, output_vector.data(), 1);
+                        // for matrix to matrix multiplication
+                        // cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, weight_out, batch_size, weight_inp, 1.0f, flattened_weights.data(), weight_inp, input_activations[0].data(), weight_inp, 0.0f, output.data(), weight_out);
+                        cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, batch_size, weight_out, weight_inp, 1.0f, input_activations.data(), weight_inp, weights.data(), weight_out, 0.0f, output_vector.data(), weight_out);
 
 
-                        return output_vector;
+
+                        // For vector to matrix multiplication:
+                        // cblas_sgemv(CblasRowMajor, CblasTrans, weight_inp, weight_out, 1.0f, weights.data(), weight_out, input_activations.data(), 1, 0.0f, output_vector.data(), 1);
+
                     #else
                         // TODO: Add a fallback code for other platforms
 
+                        // printing this->weights
+                        std::cout << "&this=  \t" << this << std::endl;
+                        std::cout << "this->weight_inp=" << this->weight_inp << "\t this->weight_out=" << this->weight_out << std::endl;
+                        std::cout << "this->weights.size=" << this->weights.size() << "\t this->weights flattened values=" << std::endl;
+                        for(int i = 0; i < this->weights.size(); i++){ 
+                            std::cout << this->weights[i] << " ";
+                        }
+
+                        for (int batch = 0; batch < batch_size; batch++) {
+                            for (int out = 0; out < weight_out; out++) {
+                                float result = 0.0f;
+                                for (int in = 0; in < weight_inp; in++) {
+                                    result += input_activations[batch * weight_inp + in] * this->weights[in * weight_out + out];
+                                }
+                                output_vector[batch * weight_out + out] = result;
+                            }
+                        }
+
+
+
+
                     #endif
+                        if(TELEMETRY){
+                            std::cout << "Input Values" << std::endl;
+                            for(int i = 0; i < input_activations.size(); i++){
+                                std::cout << input_activations[i] << " ";
+                            }
+                            std::cout << std::endl;
+
+
+                            std::cout << "Output Values" << std::endl;
+                            for(int i = 0; i < output_vector.size(); i++){
+                                std::cout << output_vector[i] << " ";
+                            }
+                            std::cout << std::endl;
+                        }
+
+                        return output_vector;
+
                 }else{
                     if(TELEMETRY){std::cout << "Weight matrix input size not adjusted for input_activations." << std::endl;}
                     // TODO: Add support for increasing matrix row or columns 
