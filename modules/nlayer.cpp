@@ -229,8 +229,9 @@ namespace std
 
         void apply_activation_fn(std::vector<def_float_t>& input_vector){
             if(this->activationFn == ReLU){
-                #ifdef USE_OPEN_BLAS
-                    cblas_smax(0.0f, input_vector.data(), 1, input_vector.size());
+                // cblas_d
+                #if USE_OPEN_BLAS
+                    // cblas_smax(0.0f, input_vector.data(), 1, input_vector.size());
                 #endif
             }
             
@@ -414,6 +415,10 @@ namespace std
                     // output_vector = get_activation_Fn_value(output_vector);
                     apply_activation_fn(output_vector);
 
+                    this->cached_run_id = run_id;
+                    this->cached_acivation_values = output_vector;
+                    this->cached_batch_size = batch_size;
+
                     if(TELEMETRY){
                         std::cout << "Input Values" << std::endl;
                         for(int i = 0; i < input_activations.size(); i++){
@@ -460,15 +465,34 @@ namespace std
             if(!(this->being_corrected)){
                 this->being_corrected = 1;
             }else{
+                // this is detecting loop
+                if(TELEMETRY){
+                    std::cout << "Loop detected in calculating backprop error." << std::endl;
+                }
                 return(this->cached_acivation_values);
             }
 
             if(this->layer_type == Fully_Connected_INPUTS){
                 // check if backprop errors are fresh, otherwise, wrong errors will be calculated.
-                if(this->cached_run_id == run_id){
-                    
-
+                if(this->cached_run_id < run_id){
+                    if(TELEMETRY) {std::cout << "Uncalculated forward prop cache detected. this=" << this << std::endl;}
+                    this->get_activation_rec(run_id, batch_size)
                 }
+
+                std::vector<def_float_t> error_diff;
+                error_diff.reserve(activation_error.size());
+                #if USE_OPEN_BLAS
+                    // cblas_dgeadd();
+                #else
+                    for(int i = 0; i < activation_error.size(); i++){
+                        error_diff.push_back(this->cached_acivation_values[i] - activation_error[i]);
+                    }
+                #endif
+
+
+            }else if(this->layer_type== Convolutional_INPUTS){
+                
+
             }
 
             
