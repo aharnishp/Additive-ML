@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/home/aharnish/Projects/Additive-ML/build",
-  "command": "/usr/bin/clang++ -I/home/aharnish/Projects/Additive-ML/openblas -I/home/aharnish/Projects/Additive-ML/pthread -I/home/aharnish/Projects/Additive-ML/gfortran -I/usr/include/openblas -g -o CMakeFiles/main.dir/main.cpp.o -c /home/aharnish/Projects/Additive-ML/main.cpp",
-  "file": "/home/aharnish/Projects/Additive-ML/main.cpp",
-  "output": "CMakeFiles/main.dir/main.cpp.o"
-}
-]
