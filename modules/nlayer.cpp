@@ -104,14 +104,15 @@ namespace std
         vector<def_float_t> conv_filters;
         // DEPRECTATED: //  vector<vector<vector<vector<def_float_t>>>> conv_filters;
 
-        // float storing bias
-        def_float_t bias;
+        // vector of float storing bias
+        vector<def_float_t> bias;
 
         // int to store activation function of the layer
             // 0 = ReLU
             // 1 = Linear
             // 2 = sigmoid
             // 3 = exponential
+            // 4 = softmax
         activation_fn_t activationFn = ReLU;
 
         def_float_t learningRate = INITIAL_LEARNING_RATE;
@@ -161,17 +162,6 @@ namespace std
             this->is_dynamic_layer = 1;
         }
 
-        // nlayer(def_uint_small_t new_layer_type, def_uint_t x, def_uint_t y, def_uint_t z, def_uint_t activationFn, def_float_t learningRate)
-        // {
-        //     this->layer_type = new_layer_type;
-        //     this->x = x;
-        //     this->y = y;
-        //     this->z = z;
-        //     this->activationFn = activationFn;
-        //     this->learningRate = learningRate;
-        //     // this->layerVersion = DEFAULT_LAYER_VERSION;
-        //     this->is_dynamic_layer = 1;
-        // }
 
         nlayer(def_uint_t x, def_uint_t y, def_uint_t z, activation_fn_t activationFn)
         {
@@ -212,7 +202,7 @@ namespace std
         def_uint_small_t init_weight(def_uint_small_t random_values) {
             if(this->layer_type == Fully_Connected_INPUTS){
                 this->weights.clear();
-                this->weights.reserve(weight_inp * weight_out);
+                this->weights.resize(weight_inp * weight_out);
 
                 def_int_t rand_seed = get_rand_float()*1000;
                 
@@ -223,6 +213,12 @@ namespace std
                         this->weights[i] = 0;
                     }
                 }
+
+                this->bias.reserve(weight_out);
+                for (int i = 0; i < weight_out; i++) {
+                    this->bias.push_back(get_rand_float_seeded(rand_seed++));
+                }
+                
             }
             return 0;
         }
@@ -232,77 +228,33 @@ namespace std
                 // cblas_d
                 #if USE_OPEN_BLAS
                     // cblas_smax(0.0f, input_vector.data(), 1, input_vector.size());
+                #else
+                    for(int i = 0; i < input_vector.size(); i++){
+                        if(input_vector[i] < 0){
+                            input_vector[i] = 0;
+                        }
+                    }
                 #endif
+            }else if(this->activationFn == Sigmoid){
+                for(int i = 0; i < input_vector.size(); i++){
+                    input_vector[i] = 1/(1 + exp(-input_vector[i]));
+                }
+            }else if(this->activationFn == Softmax){
+                def_float_t sum = 0;
+                for(int i = 0; i < input_vector.size(); i++){
+                    sum += exp(input_vector[i]);
+                }
+
+                for(int i = 0; i < input_vector.size(); i++){
+                    input_vector[i] = exp(input_vector[i])/sum;
+                }
+            // }else if(this->activationFn == Linear){
             }
-            
         }
 
-        // std::vector<def_float_t> get_activation_Fn_value(std::vector<def_float_t> input){
-        //     if(this->activationFn == ReLU){
-        //         if(input > 0){
-        //             return input;
-        //         }else{
-        //             return 0;
-        //         }
-        //     }else if(this->activationFn == Linear){
-        //         return input;
-        //     }else if(this->activationFn == Sigmoid){
-        //         return (1/(1+exp(-input)));
-        //     }else if(this->activationFn == Exponential){
-        //         return exp(input);
-        //     }else{
-        //         return input;
-        //     }
-        // }
-
-        // def_uint_t init_weight() {
-        //     // check current layer type
-        //     if(this->layer_type != Fully_Connected_INPUTS){
-        //         return(-1);
-        //     }
-
-        //     // find the output dimension of every layer in the input_layer array
-        //     def_int_t input_length = 0;
-
-        //     for(int i = 0; i < input_layers.size(); i++){
-        //         auto this_layer = *(input_layers[i]);
-        //         cout << this_layer.get_id() << endl;
-
-        //         if(this_layer.layer_type == Fully_Connected_INPUTS){
-        //             input_length += this_layer.x;
-        //             print_telm("Added from FCLayer +" << this_layer.x << ".");
-        //         }else if(this_layer.layer_type == Convolutional_INPUTS){
-        //             print_telm("Added from CNV layer +" << this_layer.x * this_layer.y * this_layer.z);
-        //             input_length += (this_layer.x * this_layer.y * this_layer.z);
-        //         }else{
-        //             print_telm("! - Layer type unexpected when calculating input size.");
-        //         }
-        //     }
-
-        //     print_telm("Total input size is " << input_length);
-
-        //     // FIXME:
-        //     // check if this conforms to the format
-        //     if(weight_inp > input_length){print_telm("Inputs to this layer lower than before.");}
-        //     weight_inp = input_length;
-        //     weight_out = this->x;
-
-        //     // TODO:
-        //     // check if current weight matrix contains something already
-        //     // else
-            
-        //     weights.clear();
-        //     weights.resize(weight_inp * weight_out);
-
-        //     for(int i = 0; i < weight_inp * weight_out; i++){
-        //         weights[i] = get_rand_float_seeded(i);
-        //     }
-
-
-        //     // therefore the x of weight matrix is input_length before multiplication
-        //     // check if weight_inp <= 
-        //     return 0;
-        // }
+        void apply_activation_derivative_fn(std::vector<def_float_t>& input_vector){
+            if(this->activationFn == Linear)
+        }
 
         def_uint_small_t auto_resize_weight(def_uint_t preferred_input_size, def_uint_t preferred_output_size){
             if(this->layer_type == Fully_Connected_INPUTS){
@@ -408,15 +360,22 @@ namespace std
                             }
                         }
 
-                    #endif
+                        // add bias
+                        if(TELEMETRY){ if(bias.size() != weight_out){ std::cout << "this->bias uninitialized. this=" << this << std::endl; } }
+                        for (int i = 0; i < weight_out*batch_size; i++) {
+                            output_vector[i] += this->bias[i%weight_out];   // add bias to all elements in the batch
+                        }
+                        
 
+                    #endif
 
                     // apply activation function
                     // output_vector = get_activation_Fn_value(output_vector);
                     apply_activation_fn(output_vector);
 
+                    // store copy of outputs to cache 
                     this->cached_run_id = run_id;
-                    this->cached_acivation_values = output_vector;
+                    this->cached_acivation_values = output_vector;  // confirmed: creates copy
                     this->cached_batch_size = batch_size;
 
                     if(TELEMETRY){
@@ -529,9 +488,60 @@ namespace std
                             }
                         }
 
+                        if(TELEMETRY){
+                            for (int i = 0; i < weight_out; i++) {
+                                for (int j = 0; j < weight_inp; j++) {
+                                    std::cout << deltaWeights[i * weight_inp + j] << " ";
+                                }
+                                std::cout << std::endl;
+                            }
+                        }
+
+                        // calculate for Biases
+                        std::vector<def_float_t> delta_bias;    // empty vec
+                        delta_bias.reserve(weight_out);
+
+                        // summing all errors for each neurons across the batch
+                        for (int i = 0; i < weight_out; i++) {
+                            def_float_t sum = 0;
+                            for (int j = 0; j < batch_size; j++) {
+                                sum += activation_error[j * weight_out + i];
+                            }
+                            delta_bias.push_back(sum * reci_batch_size);
+                        }
+
+                        if(TELEMETRY){
+                            for (int i = 0; i < weight_out; i++) {
+                                std::cout << delta_bias[i] << " ";
+                            }
+                            std::cout << std::endl;
+                        }
+
+                        std::vector<def_float_t> old_weights = this->weights;
+
+                        // update weights
+                        for(int i = 0; i < weight_out; i++){
+                            for(int j = 0; j < weight_inp; j++){
+                                this->weights[ i * weight_inp + j ] -= deltaWeights[ i * weight_inp + j ] * this->learningRate;
+                            }
+                        }
+
+                        // update bias
+                        for(int i = 0; i < weight_out; i++){
+                            this->bias[i] -= delta_bias[i] * this->learningRate;
+                        }
+
+                        // finding error for input layer
+                        std::vector<def_float_t> input_error;
+                        input_error.reserve(this->weight_inp * batch_size);
+
+
+                        // splitting input corrections to their corresponding layers
                         
 
-                        dW = (1/batch_size) * matmul(last_inputs * dZ.T);
+
+                        // TODO: 
+
                     #endif
 
 

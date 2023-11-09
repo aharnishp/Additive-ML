@@ -32,7 +32,8 @@ typedef enum {
     ReLU = 0,
     Linear = 1,
     Sigmoid = 2,
-    Exponential = 3
+    Exponential = 3,
+    Softmax = 4
 } activation_fn_t;
 
 
