@@ -4,7 +4,7 @@
 #include <cstring>
 
 #if defined(__x86_64__) || defined(__aarch64__)
-    #define USE_OPEN_BLAS 1    // previously = 1
+    #define USE_OPEN_BLAS 0    // previously = 1
     #include<cblas.h>
 #else
     #define USE_OPEN_BLAS 0
@@ -476,7 +476,7 @@ namespace std
                 // check if backprop errors are fresh, otherwise, wrong errors will be calculated.
                 if(this->cached_run_id < run_id){
                     if(TELEMETRY) {std::cout << "Uncalculated forward prop cache detected. this=" << this << std::endl;}
-                    this->get_activation_rec(run_id, batch_size)
+                    this->get_activation_rec(run_id, batch_size);
                 }
 
                 std::vector<def_float_t> error_diff;
@@ -484,14 +484,62 @@ namespace std
                 #if USE_OPEN_BLAS
                     // cblas_dgeadd();
                 #else
-                    for(int i = 0; i < activation_error.size(); i++){
-                        error_diff.push_back(this->cached_acivation_values[i] - activation_error[i]);
+                    // getting difference (error) in current activation and expected activation
+                    // for(int i = 0; i < activation_error.size(); i++){
+                    //     error_diff.push_back(this->cached_acivation_values[i] - activation_error[i]);
+                    // }
+                    
+                    // generate a list of last inputs
+                    std::vector<def_float_t> last_inputs;
+                    last_inputs.reserve(this->weight_inp);
+
+                    this->being_evaluated = 1;
+
+                    for(int i = 0; i < this->input_layers.size(); i++){
+                        // currently taking cached values directly from input_layers
+                        if (this->input_layers[i]->cached_run_id == run_id){
+                            last_inputs.insert(last_inputs.end(), this->input_layers[i]->cached_acivation_values.begin(), this->input_layers[i]->cached_acivation_values.end());
+                        }else{
+                            vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id, batch_size);
+                            last_inputs.insert(last_inputs.end(), new_activation.begin(), new_activation.end());
+                        }
                     }
+
+                    this->being_evaluated = 0;
+
+
+
+
+                    #if USE_OPEN_BLAS
+
+                    #else
+                        vector<def_float_t> deltaWeights;
+                        deltaWeights.reserve(this->weight_inp * this->weight_out);
+
+                        def_float_t reci_batch_size = 1/batch_size;
+
+                        // matrix multiply activation_error and last_inputs
+                        for(int i = 0; i < this->weight_out; i++){
+                            for(int j = 0; j < this->weight_inp; j++){
+                                def_float_t sum = 0;
+                                for(int k = 0; k < batch_size; k++){
+                                    sum += activation_error[k*this->weight_out + i] * last_inputs[k*this->weight_inp + j];
+                                }
+                                deltaWeights.push_back(sum * reci_batch_size);
+                            }
+                        }
+
+                        
+
+                        dW = (1/batch_size) * matmul(last_inputs * dZ.T);
+                    #endif
+
+
+
                 #endif
 
 
             }else if(this->layer_type== Convolutional_INPUTS){
-                
 
             }
 
@@ -499,107 +547,6 @@ namespace std
             
             this->being_corrected = 0;
         }
-
-        // vector<def_float_t> get_activation(def_int_t run_id){
-        //     if(this->cached_run_id == run_id){
-        //         return cached_acivation_values;
-        //     }
-            
-        //     if(this->layer_type == Fully_Connected_INPUTS){
-        //         // build an array of input activation before calculating itself's activation
-        //         // visit all input_layers and add number of nodes to get their activations
-        //         vector<def_float_t> input_activations;
-
-        //         // check if all inputs of this layer have cached their activations?
-        //         for(int i = 0; i < this->input_layers.size(); i++){
-        //             // if this->input_layers[i]->cached_run_id is same as run_id, it was calculated in this iteration.
-        //             if(this->input_layers[i]->cached_run_id == run_id){
-                        
-        //             }
-        //         }
-                
-
-        //         // // if only it were so simple: // collect activations of all layers and append to vector input_activations
-        //         // for(int i = 0; i < this->input_layers.size(); i++){
-        //         //     vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id);
-        //         //     input_activations.insert(input_activations.end(), new_activation.begin(), new_activation.end());
-        //         // }
-
-        //         // if(TELEMETRY) { std::cout << "inputs=" << std::endl; }
-
-        //         // check if existing dimensions of this->weights matches with size of inputs 
-
-
-
-        //         this->being_evaluated = 0;
-        //     }else if(this->layer_type == Convolutional_INPUTS){
-
-        //         this->being_evaluated = 0;
-        //     }
-
-        // }
-
-        // vector<def_float_t> get_activation(def_int_t run_id){
-        //     if(this->cached_run_id == run_id){
-        //         return cached_acivation_values;
-        //     }
-        //     // build an array of input activation before calculating itself's activation
-        //     // visit all input_layers and add number of nodes to get their activations
-
-        //     // the changing perspective code starts below.
-        //     std::nlayer* curr_layer_ptr;
-        //     // vector<nlayer*> visited_layers;
-
-        //     vector<def_float_t> curr_input_activations; // store the value vector for input_layers of current layer.
-        //     curr_layer_ptr = this;
-
-        //     // for current layer, check each input layer
-        //     for(int i = 0; i < curr_layer_ptr->input_layers.size(); i++){
-        //         // checking what is type of this layer
-        //         if(curr_layer_ptr->input_layers[i]->layer_type == Fully_Connected_INPUTS){
-        //             std::cout << "this layer is Fully Connected" << std::endl;
-        //             def_uint_t this_input_size = curr_layer_ptr->input_layers[i]->x * curr_layer_ptr->input_layers[i]->y * curr_layer_ptr->input_layers[i]->z;
-
-        //             // check if this layer has cached values for current run id
-        //             if(curr_layer_ptr->cached_run_id == run_id){
-        //                 // curr_input_activations.insert(curr_layer_ptr->cached_acivation_values);
-        //                 curr_input_activations.insert(curr_input_activations.end(), curr_layer_ptr->cached_acivation_values.begin(), curr_layer_ptr->cached_acivation_values.end() );
-        //             }
-
-        //         }else if(curr_layer_ptr->input_layers[i]->layer_type == Convolutional_INPUTS){
-        //             std::cout << "this layer is a Convolutional layer" << std::endl;
-                    
-        //         }
-        //     }
-        // }
-
-        // void reset_weights()
-        // {
-        //     // check this->layer_type
-        //     if(this->layer_type == Fully_Connected_INPUTS) {
-        //         if(weights_allocator==NULL){
-
-        //         }  // if not already allocated
-
-        //         // check if dimension of existing weights is correct
-        //         if(allocated_weight_x != weight_inp || allocated_weight_y != weight_out){
-        //             // size allocated is old or incorrect
-        //             // deallocate weight matrix
-                    
-
-        //         }
-
-        //         def_uint_t count = 0;
-        //         fori(i,allocated_weight_x){
-        //             fori(j,allocated_weight_y){
-        //                 set_weight(i,j,get_rand_float_seeded((unsigned int)count));
-        //                 count++;
-        //             }
-        //             // weights_allocator[i] = get_rand_float();
-        //         }
-        //     }
-        // }
-
 
 
 

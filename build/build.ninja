@@ -39,7 +39,7 @@ include CMakeFiles/rules.ninja
 #############################################
 # Logical path to working directory; prefix for absolute paths.
 
-cmake_ninja_workdir = /home/aharnish/Documents/Development/ML/Additive-ML/build/
+cmake_ninja_workdir = /home/aharnish/Projects/Additive-ML/build/
 # =============================================================================
 # Object build statements for EXECUTABLE target main
 
@@ -49,10 +49,10 @@ cmake_ninja_workdir = /home/aharnish/Documents/Development/ML/Additive-ML/build/
 
 build cmake_object_order_depends_target_main: phony || CMakeFiles/main.dir
 
-build CMakeFiles/main.dir/main.cpp.o: CXX_COMPILER__main_unscanned_Debug /home/aharnish/Documents/Development/ML/Additive-ML/main.cpp || cmake_object_order_depends_target_main
+build CMakeFiles/main.dir/main.cpp.o: CXX_COMPILER__main_unscanned_Debug /home/aharnish/Projects/Additive-ML/main.cpp || cmake_object_order_depends_target_main
   DEP_FILE = CMakeFiles/main.dir/main.cpp.o.d
   FLAGS = -g
-  INCLUDES = -I/home/aharnish/Documents/Development/ML/Additive-ML/openblas -I/home/aharnish/Documents/Development/ML/Additive-ML/pthread -I/home/aharnish/Documents/Development/ML/Additive-ML/gfortran -I/usr/include/openblas
+  INCLUDES = -I/home/aharnish/Projects/Additive-ML/openblas -I/home/aharnish/Projects/Additive-ML/pthread -I/home/aharnish/Projects/Additive-ML/gfortran -I/usr/include/openblas
   OBJECT_DIR = CMakeFiles/main.dir
   OBJECT_FILE_DIR = CMakeFiles/main.dir
 
@@ -78,7 +78,7 @@ build main: CXX_EXECUTABLE_LINKER__main_Debug CMakeFiles/main.dir/main.cpp.o | /
 # Utility command for edit_cache
 
 build CMakeFiles/edit_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /home/aharnish/Documents/Development/ML/Additive-ML/build && /usr/bin/ccmake -S/home/aharnish/Documents/Development/ML/Additive-ML -B/home/aharnish/Documents/Development/ML/Additive-ML/build
+  COMMAND = cd /home/aharnish/Projects/Additive-ML/build && /usr/bin/ccmake -S/home/aharnish/Projects/Additive-ML -B/home/aharnish/Projects/Additive-ML/build
   DESC = Running CMake cache editor...
   pool = console
   restat = 1
@@ -90,7 +90,7 @@ build edit_cache: phony CMakeFiles/edit_cache.util
 # Utility command for rebuild_cache
 
 build CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /home/aharnish/Documents/Development/ML/Additive-ML/build && /usr/bin/cmake --regenerate-during-build -S/home/aharnish/Documents/Development/ML/Additive-ML -B/home/aharnish/Documents/Development/ML/Additive-ML/build
+  COMMAND = cd /home/aharnish/Projects/Additive-ML/build && /usr/bin/cmake --regenerate-during-build -S/home/aharnish/Projects/Additive-ML -B/home/aharnish/Projects/Additive-ML/build
   DESC = Running CMake to regenerate build system...
   pool = console
   restat = 1
@@ -106,7 +106,7 @@ build rebuild_cache: phony CMakeFiles/rebuild_cache.util
 # =============================================================================
 
 #############################################
-# Folder: /home/aharnish/Documents/Development/ML/Additive-ML/build
+# Folder: /home/aharnish/Projects/Additive-ML/build
 
 build all: phony main
 
@@ -117,14 +117,14 @@ build all: phony main
 #############################################
 # Re-run CMake if any of its inputs changed.
 
-build build.ninja: RERUN_CMAKE | /home/aharnish/Documents/Development/ML/Additive-ML/CMakeLists.txt /usr/lib/cmake/OpenBLAS/OpenBLASConfig.cmake /usr/lib/cmake/OpenBLAS/OpenBLASConfigVersion.cmake /usr/lib/cmake/OpenBLAS/OpenBLASTargets-noconfig.cmake /usr/lib/cmake/OpenBLAS/OpenBLASTargets.cmake /usr/share/cmake/Modules/CMakeCInformation.cmake /usr/share/cmake/Modules/CMakeCXXInformation.cmake /usr/share/cmake/Modules/CMakeCommonLanguageInclude.cmake /usr/share/cmake/Modules/CMakeGenericSystem.cmake /usr/share/cmake/Modules/CMakeInitializeConfigs.cmake /usr/share/cmake/Modules/CMakeLanguageInformation.cmake /usr/share/cmake/Modules/CMakeSystemSpecificInformation.cmake /usr/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake /usr/share/cmake/Modules/Compiler/CMakeCommonCompilerMacros.cmake /usr/share/cmake/Modules/Compiler/GNU-C.cmake /usr/share/cmake/Modules/Compiler/GNU-CXX.cmake /usr/share/cmake/Modules/Compiler/GNU.cmake /usr/share/cmake/Modules/Platform/Linux-GNU-C.cmake /usr/share/cmake/Modules/Platform/Linux-GNU-CXX.cmake /usr/share/cmake/Modules/Platform/Linux-GNU.cmake /usr/share/cmake/Modules/Platform/Linux-Initialize.cmake /usr/share/cmake/Modules/Platform/Linux.cmake /usr/share/cmake/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.27.7/CMakeCCompiler.cmake CMakeFiles/3.27.7/CMakeCXXCompiler.cmake CMakeFiles/3.27.7/CMakeSystem.cmake
+build build.ninja: RERUN_CMAKE | /home/aharnish/Projects/Additive-ML/CMakeLists.txt /usr/lib/cmake/OpenBLAS/OpenBLASConfig.cmake /usr/lib/cmake/OpenBLAS/OpenBLASConfigVersion.cmake /usr/lib/cmake/OpenBLAS/OpenBLASTargets-noconfig.cmake /usr/lib/cmake/OpenBLAS/OpenBLASTargets.cmake /usr/share/cmake/Modules/CMakeCInformation.cmake /usr/share/cmake/Modules/CMakeCXXInformation.cmake /usr/share/cmake/Modules/CMakeCommonLanguageInclude.cmake /usr/share/cmake/Modules/CMakeGenericSystem.cmake /usr/share/cmake/Modules/CMakeInitializeConfigs.cmake /usr/share/cmake/Modules/CMakeLanguageInformation.cmake /usr/share/cmake/Modules/CMakeSystemSpecificInformation.cmake /usr/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake /usr/share/cmake/Modules/Compiler/CMakeCommonCompilerMacros.cmake /usr/share/cmake/Modules/Compiler/Clang-C.cmake /usr/share/cmake/Modules/Compiler/Clang-CXX.cmake /usr/share/cmake/Modules/Compiler/Clang.cmake /usr/share/cmake/Modules/Compiler/GNU.cmake /usr/share/cmake/Modules/Platform/Linux-Clang-C.cmake /usr/share/cmake/Modules/Platform/Linux-Clang-CXX.cmake /usr/share/cmake/Modules/Platform/Linux-GNU-C.cmake /usr/share/cmake/Modules/Platform/Linux-GNU-CXX.cmake /usr/share/cmake/Modules/Platform/Linux-GNU.cmake /usr/share/cmake/Modules/Platform/Linux-Initialize.cmake /usr/share/cmake/Modules/Platform/Linux.cmake /usr/share/cmake/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.27.7/CMakeCCompiler.cmake CMakeFiles/3.27.7/CMakeCXXCompiler.cmake CMakeFiles/3.27.7/CMakeSystem.cmake
   pool = console
 
 
 #############################################
 # A missing CMake input file is not an error.
 
-build /home/aharnish/Documents/Development/ML/Additive-ML/CMakeLists.txt /usr/lib/cmake/OpenBLAS/OpenBLASConfig.cmake /usr/lib/cmake/OpenBLAS/OpenBLASConfigVersion.cmake /usr/lib/cmake/OpenBLAS/OpenBLASTargets-noconfig.cmake /usr/lib/cmake/OpenBLAS/OpenBLASTargets.cmake /usr/share/cmake/Modules/CMakeCInformation.cmake /usr/share/cmake/Modules/CMakeCXXInformation.cmake /usr/share/cmake/Modules/CMakeCommonLanguageInclude.cmake /usr/share/cmake/Modules/CMakeGenericSystem.cmake /usr/share/cmake/Modules/CMakeInitializeConfigs.cmake /usr/share/cmake/Modules/CMakeLanguageInformation.cmake /usr/share/cmake/Modules/CMakeSystemSpecificInformation.cmake /usr/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake /usr/share/cmake/Modules/Compiler/CMakeCommonCompilerMacros.cmake /usr/share/cmake/Modules/Compiler/GNU-C.cmake /usr/share/cmake/Modules/Compiler/GNU-CXX.cmake /usr/share/cmake/Modules/Compiler/GNU.cmake /usr/share/cmake/Modules/Platform/Linux-GNU-C.cmake /usr/share/cmake/Modules/Platform/Linux-GNU-CXX.cmake /usr/share/cmake/Modules/Platform/Linux-GNU.cmake /usr/share/cmake/Modules/Platform/Linux-Initialize.cmake /usr/share/cmake/Modules/Platform/Linux.cmake /usr/share/cmake/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.27.7/CMakeCCompiler.cmake CMakeFiles/3.27.7/CMakeCXXCompiler.cmake CMakeFiles/3.27.7/CMakeSystem.cmake: phony
+build /home/aharnish/Projects/Additive-ML/CMakeLists.txt /usr/lib/cmake/OpenBLAS/OpenBLASConfig.cmake /usr/lib/cmake/OpenBLAS/OpenBLASConfigVersion.cmake /usr/lib/cmake/OpenBLAS/OpenBLASTargets-noconfig.cmake /usr/lib/cmake/OpenBLAS/OpenBLASTargets.cmake /usr/share/cmake/Modules/CMakeCInformation.cmake /usr/share/cmake/Modules/CMakeCXXInformation.cmake /usr/share/cmake/Modules/CMakeCommonLanguageInclude.cmake /usr/share/cmake/Modules/CMakeGenericSystem.cmake /usr/share/cmake/Modules/CMakeInitializeConfigs.cmake /usr/share/cmake/Modules/CMakeLanguageInformation.cmake /usr/share/cmake/Modules/CMakeSystemSpecificInformation.cmake /usr/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake /usr/share/cmake/Modules/Compiler/CMakeCommonCompilerMacros.cmake /usr/share/cmake/Modules/Compiler/Clang-C.cmake /usr/share/cmake/Modules/Compiler/Clang-CXX.cmake /usr/share/cmake/Modules/Compiler/Clang.cmake /usr/share/cmake/Modules/Compiler/GNU.cmake /usr/share/cmake/Modules/Platform/Linux-Clang-C.cmake /usr/share/cmake/Modules/Platform/Linux-Clang-CXX.cmake /usr/share/cmake/Modules/Platform/Linux-GNU-C.cmake /usr/share/cmake/Modules/Platform/Linux-GNU-CXX.cmake /usr/share/cmake/Modules/Platform/Linux-GNU.cmake /usr/share/cmake/Modules/Platform/Linux-Initialize.cmake /usr/share/cmake/Modules/Platform/Linux.cmake /usr/share/cmake/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.27.7/CMakeCCompiler.cmake CMakeFiles/3.27.7/CMakeCXXCompiler.cmake CMakeFiles/3.27.7/CMakeSystem.cmake: phony
 
 
 #############################################

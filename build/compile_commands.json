@@ -1,8 +1,8 @@
 [
 {
-  "directory": "/home/aharnish/Documents/Development/ML/Additive-ML/build",
-  "command": "/usr/bin/g++ -I/home/aharnish/Documents/Development/ML/Additive-ML/openblas -I/home/aharnish/Documents/Development/ML/Additive-ML/pthread -I/home/aharnish/Documents/Development/ML/Additive-ML/gfortran -I/usr/include/openblas -g -o CMakeFiles/main.dir/main.cpp.o -c /home/aharnish/Documents/Development/ML/Additive-ML/main.cpp",
-  "file": "/home/aharnish/Documents/Development/ML/Additive-ML/main.cpp",
+  "directory": "/home/aharnish/Projects/Additive-ML/build",
+  "command": "/usr/bin/clang++ -I/home/aharnish/Projects/Additive-ML/openblas -I/home/aharnish/Projects/Additive-ML/pthread -I/home/aharnish/Projects/Additive-ML/gfortran -I/usr/include/openblas -g -o CMakeFiles/main.dir/main.cpp.o -c /home/aharnish/Projects/Additive-ML/main.cpp",
+  "file": "/home/aharnish/Projects/Additive-ML/main.cpp",
   "output": "CMakeFiles/main.dir/main.cpp.o"
 }
 ]
