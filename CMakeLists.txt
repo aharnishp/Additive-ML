@@ -16,7 +16,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
 endif()
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    target_include_directories(main PRIVATE /usr/include/aarch64-linux-gnu/openblas-pthread)
+    target_include_directories(main PRIVATE /usr/include/aarch64-linux-gnu/)
 endif()
 
     target_link_libraries(main PRIVATE /usr/lib/libopenblas.so)
