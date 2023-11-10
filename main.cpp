@@ -13,7 +13,7 @@ int main(){
     std::cout << "Main Executed!" << std::endl;
 
     std::nlayer layer1;
-    std::nlayer layer2;
+    std::nlayer layer2(4, ReLU, 0.01);
     // std::nlayer layer3;
     // std::nlayer cnvla4(3,2,1,Linear_activation_state, 0.06);
 
@@ -55,11 +55,13 @@ int main(){
         0.9, 0.10, 0.11, 0.12
     };
 
-    // print all flattened weight values:
-    std::cout << "Printing Flattened Weights" << std::endl;
-    fori(i, layer2.weights.size()){
-        std::cout << layer2.weights[i] << std::endl;
-    }
+    layer2.bias = {0.1,0.2,0.3,0.4};
+
+    // // print all flattened weight values:
+    // std::cout << "Printing Flattened Weights" << std::endl;
+    // fori(i, layer2.weights.size()){
+    //     std::cout << layer2.weights[i] << std::endl;
+    // }
 
     // print all weight values:
     std::cout << "Printing Weights" << std::endl;
@@ -70,20 +72,86 @@ int main(){
         std::cout << std::endl;
     }
 
-    std::cout << "Compiling version 6" << std::endl;
+    std::cout << "Compiling version 7" << std::endl;
 
     std::vector<float> output;
     std::cout << "layer2.weights.size() = " << layer2.weights.size() << std::endl;
     std::cout << "&layer2=\t" << &layer2 << std::endl;
+
     output = layer2.get_activation_rec(1,1);
 
 
+    std::cout << std::endl << std::endl << "######### Back Proping ##########" << std::endl;
 
-    std::cout << "######### Back Proping ##########" << std::endl;
+    std::vector<def_float_t> expected_vec = {1,2,3,4};
+    fori(iter, 1000){
+        std::vector<def_float_t> error_vec;
+        fori(i,expected_vec.size()){
+            error_vec.push_back((output[i] - expected_vec[i]));
+        }
 
-    std::vector<def_float_t> expected_vec = {4,4,4,4};
+        // print error_vec
+        std::cout << "Error vec = ";
+        fori(i, error_vec.size()){
+            std::cout << error_vec[i] << " ";
+        }std::cout << std::endl;
 
-    layer2.get_correct_error_rec(1,1,expected_vec);
+        layer2.get_correct_error_rec(iter+1,1,error_vec, 0.00005);
+    }
+
+    // layer2.get_correct_error_rec(1,1,error_vec, 0.05);
+    // fori(i,10){
+    //     layer2.get_correct_error_rec(i+2,1,error_vec, 0.05);
+    // }
+
+    output = layer2.get_activation_rec(1005,1);
+
+    // // print all weight values:
+    // std::cout << "Printing Weights after 1 correction" << std::endl;
+    // fori(i, layer2.weight_inp){
+    //     fori(j,layer2.weight_out){
+    //         std::cout << layer2.get_weight_value(i,j) << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+
+
+
+    // output = layer2.get_activation_rec(2,1);
+    // fori(i,output.size()){
+    //     std::cout << output[i] << " ";
+    // }std::cout << std::endl;
+
+    // def_int_t run_id = 3;
+    // fori(i, 99){
+    //     layer2.get_correct_error_rec(run_id++,1,expected_vec, 0.05);
+    // }
+    // // layer2.get_correct_error_rec(run_id++,1,expected_vec, 0.05);
+
+
+    // output = layer2.get_activation_rec(run_id++,1);
+
+
+
+
+
+
+
+
+
+
+
+
+    // // print all weight values:
+    // std::cout << "Printing Weights after 100 correction" << std::endl;
+    // fori(i, layer2.weight_inp){
+    //     fori(j,layer2.weight_out){
+    //         std::cout << layer2.get_weight_value(i,j) << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+
+
 
     // // print the outputs
     // fori(i, output.size()){

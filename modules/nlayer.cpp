@@ -115,7 +115,7 @@ namespace std
             // 4 = softmax
         activation_fn_t activationFn = ReLU;
 
-        def_float_t learningRate = INITIAL_LEARNING_RATE;
+        def_float_t learning_rate = INITIAL_LEARNING_RATE;
 
 
 
@@ -150,14 +150,14 @@ namespace std
 
         nlayer(){};
 
-        nlayer(def_uint_t x, def_uint_t y, def_uint_t z, activation_fn_t activationFn, def_float_t learningRate)
+        nlayer(def_uint_t x, def_uint_t y, def_uint_t z, activation_fn_t activationFn, def_float_t learning_rate)
         {
             this->layer_type = Convolutional_INPUTS;
             this->x = x;
             this->y = y;
             this->z = z;
             this->activationFn = activationFn;
-            this->learningRate = learningRate;
+            this->learning_rate = learning_rate;
             // this->layerVersion = DEFAULT_LAYER_VERSION;
             this->is_dynamic_layer = 1;
         }
@@ -170,18 +170,18 @@ namespace std
             this->y = y;
             this->z = z;
             this->activationFn = activationFn;
-            this->learningRate = INITIAL_LEARNING_RATE;
+            this->learning_rate = INITIAL_LEARNING_RATE;
             // this->layerVersion = DEFAULT_LAYER_VERSION;
             this->is_dynamic_layer = 1;
         }
 
-        nlayer(def_uint_t x, activation_fn_t activation_fn, def_float_t learningRate)
+        nlayer(def_uint_t x, activation_fn_t activation_fn, def_float_t learning_rate)
         {
             this->x = x;
             this->y = 1;
             this->z = 1;
             this->activationFn = activation_fn;
-            this->learningRate = learningRate;
+            this->learning_rate = learning_rate;
             // this->layerVersion = DEFAULT_LAYER_VERSION;
             this->is_dynamic_layer = 1;
         }
@@ -320,8 +320,11 @@ namespace std
 
         vector<def_float_t> get_activation_rec(def_int_t run_id, def_uint_t batch_size){
             // this is memory in efficient, but faster to implement.
-            if(this->cached_run_id == run_id || this->is_input_layer){  // check whether to return directly from cache if already calculated.
+            if(this->cached_run_id == run_id){  // check whether to return directly from cache if already calculated.
                 if(TELEMETRY) { std::cout << "Result returned from cache. id=" << this->id << " size=" << this->x * this->y * this->z << std::endl;}
+                return cached_acivation_values;
+            }else if(this->is_input_layer){
+                if(TELEMETRY) { std::cout << "Result returned from input_cache. id=" << this->id << " size=" << this->x * this->y * this->z << std::endl;}
                 return cached_acivation_values;
             }
 
@@ -438,7 +441,7 @@ namespace std
             return empty_vector;
         }
 
-        vector<def_float_t> get_correct_error_rec(def_int_t run_id, def_uint_t batch_size, vector<def_float_t> activation_error){
+        vector<def_float_t> get_correct_error_rec(def_int_t run_id, def_uint_t batch_size, vector<def_float_t> activation_error, def_float_t learning_rate){
             if(!(this->being_corrected)){
                 this->being_corrected = 1;
             }else{
@@ -447,6 +450,11 @@ namespace std
                     std::cout << "Loop detected in calculating backprop error." << std::endl;
                 }
                 return(this->cached_acivation_values);
+            }
+
+            if(this->is_input_layer == 1){
+                this->being_corrected = 0;
+                return vector<def_float_t>(0,0);
             }
 
             if(this->layer_type == Fully_Connected_INPUTS){
@@ -493,28 +501,32 @@ namespace std
 
                     #if USE_OPEN_BLAS
 
+
                     #else
-                        vector<def_float_t> deltaWeights;   // the dimensions are same as weights matrix
-                        deltaWeights.reserve(this->weight_inp * this->weight_out);
+                        vector<def_float_t> delta_weight;   // the dimensions are same as weights matrix
+                        delta_weight.reserve(this->weight_inp * this->weight_out);
 
                         def_float_t reci_batch_size = 1/batch_size;
-
-                        // matrix multiply activation_error and last_inputs
-                        for(int i = 0; i < this->weight_out; i++){
-                            for(int j = 0; j < this->weight_inp; j++){
-                                def_float_t sum = 0;
-                                for(int k = 0; k < batch_size; k++){
-                                    sum += activation_error[k*this->weight_out + i] * last_inputs[k*this->weight_inp + j];
+                        
+                        // Matrix Multiply to get delta_weights
+                        def_float_t sum = 0;
+                        // FIXME: Rewrite code to generate Matrix
+                        for(int col = 0; col < weight_inp; col++){
+                            for(int row = 0; row < weight_out; row++){
+                                sum = 0;
+                                for(int batch_num = 0; batch_num < batch_size; batch_num++){
+                                    sum += activation_error[(batch_num*this->weight_out) + row] * last_inputs[(batch_num*this->weight_inp) + col]  * learning_rate;
                                 }
-                                deltaWeights.push_back(sum * reci_batch_size);
+
+                                delta_weight.push_back(sum);
                             }
                         }
 
                         if(TELEMETRY){
-                            std::cout << "# deltaWeights = " << std::endl;
-                            for (int i = 0; i < weight_out; i++) {
-                                for (int j = 0; j < weight_inp; j++) {
-                                    std::cout << deltaWeights[i * weight_inp + j] << " ";
+                            std::cout << "# delta_weight = " << std::endl;
+                            for (int i = 0; i < weight_inp; i++) {
+                                for (int j = 0; j < weight_out; j++) {
+                                    std::cout << delta_weight[i * weight_out + j] << " ";
                                 }
                                 std::cout << std::endl;
                             }
@@ -546,14 +558,14 @@ namespace std
                         // update weights
                         for(int i = 0; i < weight_out; i++){
                             for(int j = 0; j < weight_inp; j++){
-                                this->weights[ i * weight_inp + j ] -= deltaWeights[ i * weight_inp + j ] * this->learningRate;
+                                this->weights[ i * weight_inp + j ] -= delta_weight[ i * weight_inp + j ];
                             }
                         }
 
-                        // update bias
-                        for(int i = 0; i < weight_out; i++){
-                            this->bias[i] -= delta_bias[i] * this->learningRate;
-                        }
+                        // // update bias
+                        // for(int i = 0; i < weight_out; i++){
+                        //     this->bias[i] -= delta_bias[i] * learning_rate;
+                        // }
 
                         // input_dz = (W.T x dZ) * g'(Z)
 
@@ -605,11 +617,10 @@ namespace std
                                     input_error.begin() + (end_range + 1) * sizeof(def_float_t));
                             }
 
-                            this->input_layers[i]->get_correct_error_rec(run_id, batch_size, this_errors);
+                            this->input_layers[i]->get_correct_error_rec(run_id, batch_size, this_errors, learning_rate);
                             
                         }
 
-                        // TODO: 
 
                     #endif
 
@@ -623,8 +634,8 @@ namespace std
             }
 
             
-            return vector<def_float_t>(0,0);
             this->being_corrected = 0;
+            return vector<def_float_t>(0,0);
         }
     };
 
