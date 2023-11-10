@@ -77,6 +77,14 @@ int main(){
     std::cout << "&layer2=\t" << &layer2 << std::endl;
     output = layer2.get_activation_rec(1,1);
 
+
+
+    std::cout << "######### Back Proping ##########" << std::endl;
+
+    std::vector<def_float_t> expected_vec = {4,4,4,4};
+
+    layer2.get_correct_error_rec(1,1,expected_vec);
+
     // // print the outputs
     // fori(i, output.size()){
     //     std::cout << output[i] << std::endl;

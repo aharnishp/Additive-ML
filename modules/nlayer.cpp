@@ -252,10 +252,26 @@ namespace std
             }
         }
 
-        void apply_activation_derivative_fn(std::vector<def_float_t>& input_vector){
-            if(this->activationFn == Linear){
-                std::vector<def_float_t> new_result(input_vector.size(), 1);
-            }
+        void multiply_activation_derivative_fn(std::vector<def_float_t>& input_vector){
+            
+            #if USE_OPEN_BLAS
+
+            #else
+                if(this->activationFn == Linear){
+                    // do nothing
+                }else if(this->activationFn == ReLU){
+                    for(int i = 0; i < input_vector.size(); i++){
+                        if(input_vector[i] < 0){
+                            input_vector[i] = 0;
+                        }
+                    }
+                }else if(this->activationFn == Exponential){
+                    std::cout << "Currently not supporting back prop on exponential activation fn" << std::endl;
+                    // for(int i = 0; i < input_vector.size(); i++){   // SIMD
+                        
+                    // }
+                }
+            #endif
         }
 
         def_uint_small_t auto_resize_weight(def_uint_t preferred_input_size, def_uint_t preferred_output_size){
@@ -348,9 +364,9 @@ namespace std
                         std::cout << "&this=  \t" << this << std::endl;
                         std::cout << "this->weight_inp=" << this->weight_inp << "\t this->weight_out=" << this->weight_out << std::endl;
                         std::cout << "this->weights.size=" << this->weights.size() << "\t this->weights flattened values=" << std::endl;
-                        for(int i = 0; i < this->weights.size(); i++){ 
+                        if(TELEMETRY) {for(int i = 0; i < this->weights.size(); i++){ 
                             std::cout << this->weights[i] << " ";
-                        }
+                        }std::cout << std::endl;}
 
                         for (int batch = 0; batch < batch_size; batch++) {
                             for (int out = 0; out < weight_out; out++) {
@@ -457,13 +473,17 @@ namespace std
                     this->being_evaluated = 1;
 
                     for(int i = 0; i < this->input_layers.size(); i++){
+                        // asking layer for their activation
+                        vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id, batch_size);
+                        last_inputs.insert(last_inputs.end(), new_activation.begin(), new_activation.end());
+
                         // currently taking cached values directly from input_layers
-                        if (this->input_layers[i]->cached_run_id == run_id){
-                            last_inputs.insert(last_inputs.end(), this->input_layers[i]->cached_acivation_values.begin(), this->input_layers[i]->cached_acivation_values.end());
-                        }else{
-                            vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id, batch_size);
-                            last_inputs.insert(last_inputs.end(), new_activation.begin(), new_activation.end());
-                        }
+                        // if (this->input_layers[i]->cached_run_id == run_id){
+                        //     last_inputs.insert(last_inputs.end(), this->input_layers[i]->cached_acivation_values.begin(), this->input_layers[i]->cached_acivation_values.end());
+                        // }else{
+                        //     vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id, batch_size);
+                        //     last_inputs.insert(last_inputs.end(), new_activation.begin(), new_activation.end());
+                        // }
                     }
 
                     this->being_evaluated = 0;
@@ -474,7 +494,7 @@ namespace std
                     #if USE_OPEN_BLAS
 
                     #else
-                        vector<def_float_t> deltaWeights;
+                        vector<def_float_t> deltaWeights;   // the dimensions are same as weights matrix
                         deltaWeights.reserve(this->weight_inp * this->weight_out);
 
                         def_float_t reci_batch_size = 1/batch_size;
@@ -491,6 +511,7 @@ namespace std
                         }
 
                         if(TELEMETRY){
+                            std::cout << "# deltaWeights = " << std::endl;
                             for (int i = 0; i < weight_out; i++) {
                                 for (int j = 0; j < weight_inp; j++) {
                                     std::cout << deltaWeights[i * weight_inp + j] << " ";
@@ -513,6 +534,7 @@ namespace std
                         }
 
                         if(TELEMETRY){
+                            std::cout << "# delta_bias = " << std::endl;
                             for (int i = 0; i < weight_out; i++) {
                                 std::cout << delta_bias[i] << " ";
                             }
@@ -533,6 +555,8 @@ namespace std
                             this->bias[i] -= delta_bias[i] * this->learningRate;
                         }
 
+                        // input_dz = (W.T x dZ) * g'(Z)
+
                         // finding error for input layer
                         std::vector<def_float_t> input_error;
                         input_error.reserve(this->weight_inp * batch_size);
@@ -548,12 +572,40 @@ namespace std
                                 input_error.push_back(sum);
                             }
                         }
-                        
 
+
+                        // multiply the derivative of activation function with input_error
+                        multiply_activation_derivative_fn(input_error);
+
+                        def_uint_t input_split_ptr = 0;
 
                         // splitting input corrections to their corresponding layers
-                        for(int i = 0; i < (this->input_layers.size()); i++) {
+                        for(int i = 0; i < (this->input_layers.size()); i++) {  // for each layer
+                            std::vector<def_float_t> this_errors;
+                            def_uint_t this_layer_output_size = 0;
 
+
+
+                            if(this->input_layers[i]->layer_type == Fully_Connected_INPUTS){
+                                this_layer_output_size = this->input_layers[i]->weight_out;
+
+                                this_errors.reserve((this_layer_output_size)*batch_size);
+                            }
+
+                            def_uint_t start_inp = input_split_ptr;
+                            def_uint_t end_inp = input_split_ptr + this_layer_output_size;
+
+                            // also for each batch data point. basically taking out a slice from a flattened 2D matrix
+                            for(int batch = 0; batch < batch_size; batch++){
+                                def_int_t start_range = start_inp + batch * this->weight_inp;
+                                def_int_t end_range = end_inp + batch * this->weight_inp;
+
+                                this_errors.insert(this_errors.end(),
+                                    input_error.begin() + start_range * sizeof(def_float_t),
+                                    input_error.begin() + (end_range + 1) * sizeof(def_float_t));
+                            }
+
+                            this->input_layers[i]->get_correct_error_rec(run_id, batch_size, this_errors);
                             
                         }
 
@@ -571,13 +623,9 @@ namespace std
             }
 
             
-            
+            return vector<def_float_t>(0,0);
             this->being_corrected = 0;
         }
-
-
-
-
     };
 
 
