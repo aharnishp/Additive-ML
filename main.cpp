@@ -83,8 +83,12 @@ int main(){
 
     std::cout << std::endl << std::endl << "######### Back Proping ##########" << std::endl;
 
-    std::vector<def_float_t> expected_vec = {1,2,3,4};
-    fori(iter, 1000){
+    std::vector<def_float_t> expected_vec = {0,2,-3,4};
+    fori(iter,500){
+
+        output = layer2.get_activation_rec(iter+1,1);
+
+        // calculate the new error which is the difference of expected and predicted value
         std::vector<def_float_t> error_vec;
         fori(i,expected_vec.size()){
             error_vec.push_back((output[i] - expected_vec[i]));
@@ -96,7 +100,7 @@ int main(){
             std::cout << error_vec[i] << " ";
         }std::cout << std::endl;
 
-        layer2.get_correct_error_rec(iter+1,1,error_vec, 0.00005);
+        layer2.get_correct_error_rec(iter+1,1,error_vec, 0.001);
     }
 
     // layer2.get_correct_error_rec(1,1,error_vec, 0.05);
