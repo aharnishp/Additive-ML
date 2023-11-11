@@ -2,9 +2,8 @@
 
 #include <cmath>
 #include <cstring>
-
 #if defined(__x86_64__) || defined(__aarch64__)
-    #define USE_OPEN_BLAS 0    // previously = 1
+    #define USE_OPEN_BLAS 1    // previously = 1
     #include<cblas.h>
 #else
     #define USE_OPEN_BLAS 0
@@ -355,7 +354,8 @@ namespace std
                         // cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, weight_out, batch_size, weight_inp, 1.0f, flattened_weights.data(), weight_inp, input_activations[0].data(), weight_inp, 0.0f, output.data(), weight_out);
                         cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, batch_size, weight_out, weight_inp, 1.0f, input_activations.data(), weight_inp, weights.data(), weight_out, 0.0f, output_vector.data(), weight_out);
 
-
+                        // add bias matrix to output_vector using cblas
+                        cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, batch_size, weight_out, 1, 1.0f, bias.data(), 1, output_vector.data(), weight_out, 1.0f, output_vector.data(), weight_out);
 
                         // For vector to matrix multiplication:
                         // cblas_sgemv(CblasRowMajor, CblasTrans, weight_inp, weight_out, 1.0f, weights.data(), weight_out, input_activations.data(), 1, 0.0f, output_vector.data(), 1);
@@ -467,13 +467,8 @@ namespace std
                 std::vector<def_float_t> error_diff;
                 error_diff.reserve(activation_error.size());
                 #if USE_OPEN_BLAS
-                    // cblas_dgeadd();
-                #else
-                    // getting difference (error) in current activation and expected activation
-                    // for(int i = 0; i < activation_error.size(); i++){
-                    //     error_diff.push_back(this->cached_acivation_values[i] - activation_error[i]);
-                    // }
-                    
+
+
                     // generate a list of last inputs
                     std::vector<def_float_t> last_inputs;
                     last_inputs.reserve(this->weight_inp);
@@ -498,11 +493,6 @@ namespace std
 
 
 
-
-                    #if USE_OPEN_BLAS
-
-
-                    #else
                         vector<def_float_t> delta_weight;   // the dimensions are same as weights matrix
                         delta_weight.reserve(this->weight_inp * this->weight_out);
 
@@ -621,8 +611,155 @@ namespace std
                             
                         }
 
+                #else
+                    // getting difference (error) in current activation and expected activation
+                    // for(int i = 0; i < activation_error.size(); i++){
+                    //     error_diff.push_back(this->cached_acivation_values[i] - activation_error[i]);
+                    // }
+                    
+                    // generate a list of last inputs
+                    std::vector<def_float_t> last_inputs;
+                    last_inputs.reserve(this->weight_inp);
 
-                    #endif
+                    this->being_evaluated = 1;
+
+                    for(int i = 0; i < this->input_layers.size(); i++){
+                        // asking layer for their activation
+                        vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id, batch_size);
+                        last_inputs.insert(last_inputs.end(), new_activation.begin(), new_activation.end());
+
+                        // currently taking cached values directly from input_layers
+                        // if (this->input_layers[i]->cached_run_id == run_id){
+                        //     last_inputs.insert(last_inputs.end(), this->input_layers[i]->cached_acivation_values.begin(), this->input_layers[i]->cached_acivation_values.end());
+                        // }else{
+                        //     vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id, batch_size);
+                        //     last_inputs.insert(last_inputs.end(), new_activation.begin(), new_activation.end());
+                        // }
+                    }
+
+                    this->being_evaluated = 0;
+
+
+
+                    vector<def_float_t> delta_weight;   // the dimensions are same as weights matrix
+                    delta_weight.reserve(this->weight_inp * this->weight_out);
+
+                    def_float_t reci_batch_size = 1/batch_size;
+                    
+                    // Matrix Multiply to get delta_weights
+                    def_float_t sum = 0;
+                    // FIXME: Rewrite code to generate Matrix
+                    for(int col = 0; col < weight_inp; col++){
+                        for(int row = 0; row < weight_out; row++){
+                            sum = 0;
+                            for(int batch_num = 0; batch_num < batch_size; batch_num++){
+                                sum += activation_error[(batch_num*this->weight_out) + row] * last_inputs[(batch_num*this->weight_inp) + col]  * learning_rate;
+                            }
+
+                            delta_weight.push_back(sum);
+                        }
+                    }
+
+                    if(TELEMETRY){
+                        std::cout << "# delta_weight = " << std::endl;
+                        for (int i = 0; i < weight_inp; i++) {
+                            for (int j = 0; j < weight_out; j++) {
+                                std::cout << delta_weight[i * weight_out + j] << " ";
+                            }
+                            std::cout << std::endl;
+                        }
+                    }
+
+                    // calculate for Biases
+                    std::vector<def_float_t> delta_bias;    // empty vec
+                    delta_bias.reserve(weight_out);
+
+                    // summing all errors for each neurons across the batch
+                    for (int i = 0; i < weight_out; i++) {
+                        def_float_t sum = 0;
+                        for (int j = 0; j < batch_size; j++) {
+                            sum += activation_error[j * weight_out + i];
+                        }
+                        delta_bias.push_back(sum * reci_batch_size);
+                    }
+
+                    if(TELEMETRY){
+                        std::cout << "# delta_bias = " << std::endl;
+                        for (int i = 0; i < weight_out; i++) {
+                            std::cout << delta_bias[i] << " ";
+                        }
+                        std::cout << std::endl;
+                    }
+
+                    std::vector<def_float_t> old_weights = this->weights;
+
+                    // update weights
+                    for(int i = 0; i < weight_out; i++){
+                        for(int j = 0; j < weight_inp; j++){
+                            this->weights[ i * weight_inp + j ] -= delta_weight[ i * weight_inp + j ];
+                        }
+                    }
+
+                    // // update bias
+                    // for(int i = 0; i < weight_out; i++){
+                    //     this->bias[i] -= delta_bias[i] * learning_rate;
+                    // }
+
+                    // input_dz = (W.T x dZ) * g'(Z)
+
+                    // finding error for input layer
+                    std::vector<def_float_t> input_error;
+                    input_error.reserve(this->weight_inp * batch_size);
+
+                    // find the inverse transformation of weights matrix
+                    // matrix multiply activation_error and last_inputs
+                    for(int i = 0; i < this->weight_inp; i++){
+                        for(int j = 0; j < this->weight_out; j++){
+                            def_float_t sum = 0;
+                            for(int k = 0; k < batch_size; k++){
+                                sum += activation_error[k*this->weight_out + j] * old_weights[i*this->weight_out + j];
+                            }
+                            input_error.push_back(sum);
+                        }
+                    }
+
+
+                    // multiply the derivative of activation function with input_error
+                    multiply_activation_derivative_fn(input_error);
+
+                    def_uint_t input_split_ptr = 0;
+
+                    // splitting input corrections to their corresponding layers
+                    for(int i = 0; i < (this->input_layers.size()); i++) {  // for each layer
+                        std::vector<def_float_t> this_errors;
+                        def_uint_t this_layer_output_size = 0;
+
+
+
+                        if(this->input_layers[i]->layer_type == Fully_Connected_INPUTS){
+                            this_layer_output_size = this->input_layers[i]->weight_out;
+
+                            this_errors.reserve((this_layer_output_size)*batch_size);
+                        }
+
+                        def_uint_t start_inp = input_split_ptr;
+                        def_uint_t end_inp = input_split_ptr + this_layer_output_size;
+
+                        // also for each batch data point. basically taking out a slice from a flattened 2D matrix
+                        for(int batch = 0; batch < batch_size; batch++){
+                            def_int_t start_range = start_inp + batch * this->weight_inp;
+                            def_int_t end_range = end_inp + batch * this->weight_inp;
+
+                            this_errors.insert(this_errors.end(),
+                                input_error.begin() + start_range * sizeof(def_float_t),
+                                input_error.begin() + (end_range + 1) * sizeof(def_float_t));
+                        }
+
+                        this->input_layers[i]->get_correct_error_rec(run_id, batch_size, this_errors, learning_rate);
+                        
+                    }
+
+
 
 
 
