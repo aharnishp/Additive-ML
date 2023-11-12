@@ -13,7 +13,9 @@ int main(){
     std::cout << "Main Executed!" << std::endl;
 
     std::nlayer layer1;
-    std::nlayer layer2(4, ReLU, 0.01);
+    std::nlayer layer2(4, ReLU, 0.01);    
+    std::nlayer layer3(3, ReLU, 0.01);
+
     // std::nlayer layer3;
     // std::nlayer cnvla4(3,2,1,Linear_activation_state, 0.06);
 
@@ -23,14 +25,15 @@ int main(){
 
     // set up as input layer
     layer1.is_input_layer=1;
-    std::vector<float> input_values = {1,2,3};
+    std::vector<float> input_values = {0.1,0.2,1,1,0.2,0.1};
 
     layer1.cached_acivation_values = input_values;
-    layer1.cached_batch_size = 1;
+    layer1.cached_batch_size = 2;
 
     // layer3.id=3;
 
-    layer2.add_input_layer(&layer1);
+    layer2.add_input_layer(&layer3);
+    layer3.add_input_layer(&layer1);
     // layer1.add_input_layer(&layer3);
     // layer1.add_input_layer(&cnvla4);
 
@@ -47,7 +50,12 @@ int main(){
     layer2.weight_inp = 3;
     layer2.weight_out = 4;
 
+    layer3.weight_inp =3;
+    layer3.weight_out =3;
+
+
     layer2.init_weight(1);
+    layer3.init_weight(1);
     
     layer2.weights = {
         0.1, 0.2, 0.3, 0.4,
@@ -78,15 +86,15 @@ int main(){
     std::cout << "layer2.weights.size() = " << layer2.weights.size() << std::endl;
     std::cout << "&layer2=\t" << &layer2 << std::endl;
 
-    output = layer2.get_activation_rec(1,1);
+    output = layer2.get_activation_rec(1,2);
 
 
     std::cout << std::endl << std::endl << "######### Back Proping ##########" << std::endl;
 
-    std::vector<def_float_t> expected_vec = {0,2,-3,4};
-    fori(iter,500){
+    std::vector<def_float_t> expected_vec = {0,2,0,4,5,0,3,0};
+    fori(iter,1000){
 
-        output = layer2.get_activation_rec(iter+1,1);
+        output = layer2.get_activation_rec(iter+1,2);
 
         // calculate the new error which is the difference of expected and predicted value
         std::vector<def_float_t> error_vec;
@@ -100,7 +108,7 @@ int main(){
             std::cout << error_vec[i] << " ";
         }std::cout << std::endl;
 
-        layer2.get_correct_error_rec(iter+1,1,error_vec, 0.001);
+        layer2.get_correct_error_rec(iter+1,2,error_vec, 0.0001);
     }
 
     // layer2.get_correct_error_rec(1,1,error_vec, 0.05);
@@ -108,7 +116,7 @@ int main(){
     //     layer2.get_correct_error_rec(i+2,1,error_vec, 0.05);
     // }
 
-    output = layer2.get_activation_rec(1005,1);
+    output = layer2.get_activation_rec(1005,2);
 
     // // print all weight values:
     // std::cout << "Printing Weights after 1 correction" << std::endl;
