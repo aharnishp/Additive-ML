@@ -1,5 +1,6 @@
 #include "nlayer.hpp"
 
+#include <vector>
 #include <cmath>
 #include <cstring>
 // #if defined(__x86_64__) || defined(__aarch64__)
@@ -15,6 +16,41 @@
 // #define pb push_back
 
 //// Compile Time Parameters 
+#define Low_Memory_Target 1
+
+
+// Compile Parameter Code
+#ifdef Low_Memory_Target
+  // float is 4 bytes
+  #define def_float_t float
+  #define def_uint_small_t __UINT8_TYPE__
+  #define def_uint_t __UINT16_TYPE__
+  #define def_int_t __INT16_TYPE__
+  
+#else
+  // float is 8 bytes
+  #define def_float_t double
+  #define def_uint_small_t __UINT16_TYPE__
+  #define def_uint_t __UINT32_TYPE__
+  #define def_int_t __INT32_TYPE__
+#endif
+
+// Activation Function Codes
+// enum activationFn{
+//     ReLU = 0,
+//     Linear = 1,
+//     Sigmoid = 2,
+//     Exponential = 3
+// };
+
+typedef enum {
+    ReLU = 0,
+    Linear = 1,
+    Sigmoid = 2,
+    Exponential = 3,
+    Softmax = 4
+} activation_fn_t;
+
 
 // Settings
 #define TELEMETRY 1

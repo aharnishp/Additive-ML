@@ -20,7 +20,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "miDebuggerPath": "/usr/share/gdb",
+            "miDebuggerPath": "gdb",
             "linux": {
                 "MIMode": "gdb"
             },

@@ -2,7 +2,7 @@
 
 #include<iostream>
 
-#include "modules/nlayer.cpp"
+#include "modules/nlayer.hpp"
 
 // temporary testing only
 #define fori(i,n) for(int i = 0; i < n; i++)
