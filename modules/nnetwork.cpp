@@ -37,7 +37,7 @@ class nnetwork{
 
         input_layer->is_input_layer = 1;
         output_layer->add_input_layer(input_layer);
-        output_layer->init_weight(1);
+        // output_layer->init_weight(1);
     }
 
     nnetwork(def_uint_t input_layer_size, def_uint_t output_layer_size, def_float_t learning_rate){
@@ -52,7 +52,7 @@ class nnetwork{
 
         input_layer->is_input_layer = 1;
         output_layer->add_input_layer(input_layer);
-        output_layer->init_weight(1);
+        // output_layer->init_weight(1);
     }
 
     nnetwork(nlayer *input_layer, nlayer *output_layer){
@@ -65,6 +65,12 @@ class nnetwork{
         return this->run_id;
     }
 
+    /**
+     * @brief adds a new layer just before and connected to the output layer of network.
+     * @param layer_size size of the new layer (assumming fully connected)
+     * @param activation_function activation function of the new layer
+     * @param learning_rate learning rate of the new layer
+    */
     def_uint_small_t add_new_layer_at_last(def_uint_t layer_size, activation_fn_t activation_function, def_float_t learning_rate){
         /*
         adds a new layer at the end of the network.
@@ -81,6 +87,9 @@ class nnetwork{
         return new_layer->id;
     }
     
+    /**
+     * @brief given the input_values, returns the predicted value of the network.
+    */
     std::vector<def_float_t> forward_prop(std::vector<def_float_t> input_values, def_uint_t batch_size) {
         /*
         returns the predicted value of the network for the given input value.
@@ -96,13 +105,14 @@ class nnetwork{
         // return this->output_layer->cached_activation_values;        
     }
 
-
+    /**
+     * @brief calculates output layer error and recursively corrects the error in the previous layers till the input layer.
+     * @param input_values flattened 1D vector of the 2D array formed by input_layer.size * batch_size
+     * @param expected_values flattened 1D vector of the 2D array formed by output_layer.size * batch_size
+     * @param batch_size
+    */
     std::vector<def_float_t> backward_prop(std::vector<def_float_t> input_values, std::vector<def_float_t> expected_values, def_uint_t batch_size) {
-        /*
-        Using network's default learning rate, corrects the returns the error in prediction using gradient descent.
-        note: the input_valuse must be a flattened 1D array of the 2D array formed by input_layer.size * batch_size
-        and the expected_values must be a flattened 1D array of the 2D array formed by output_layer.size * batch_size
-        */
+
         run_id++;
         this->input_layer->cached_activation_values = input_values;
         this->input_layer->cached_batch_size = batch_size;
@@ -110,9 +120,25 @@ class nnetwork{
         this->output_layer->get_activation_rec(run_id,batch_size);
 
         std::vector<def_float_t> error_in_prediction;
+        // for(int i = 0; i < expected_values.size(); i++){
+        //     error_in_prediction.push_back(expected_values[i] - this->output_layer->cached_activation_values[i]);
+        // }
         std::transform(this->output_layer->cached_activation_values.begin(), this->output_layer->cached_activation_values.end(), expected_values.begin(), std::back_inserter(error_in_prediction), std::minus<def_float_t>());
 
-        this->output_layer->get_correct_error_rec(run_id, batch_size, error_in_prediction, this->default_learning_rate);     
+        // cout << "this" << this << endl;
+        // cout << "this->output_layer->id=" << this->output_layer->id << endl;
+
+        // cout << "run_id=" << run_id << endl;
+        // cout << "batch_size=" << batch_size << endl;
+        // cout << "error_in_prediction.size()=" << error_in_prediction.size() << endl;
+        
+        if(this->output_layer != NULL){
+            std::vector<def_float_t> error_in_input = this->output_layer->get_correct_error_rec(run_id, batch_size, error_in_prediction, this->default_learning_rate);
+        }else{
+            cout << "output_layer pointer is NULL" << endl;
+        }
+
+        return error_in_prediction;
     }
 };
 

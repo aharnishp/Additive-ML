@@ -269,6 +269,7 @@ namespace std
                     }
                 }
 
+                this->bias.clear();
                 this->bias.reserve(weight_out);
                 for (int i = 0; i < weight_out; i++) {
                     this->bias.push_back(get_rand_float_seeded(rand_seed++));
@@ -349,25 +350,43 @@ namespace std
             #endif
         }
 
-        def_uint_small_t auto_resize_weight(def_uint_t preferred_input_size, def_uint_t preferred_output_size){
+        /**
+         * @brief Automatically grow weights to match the input and output size of the layer.
+         * @return 0 if successful, 1 if failed.
+        */
+        def_uint_small_t auto_grow_weight(){
+            // Calculate current input weight size and output weight size and grow weights accordingly.
+            
             if(this->layer_type == Fully_Connected_INPUTS){
-                // weight_out must also equal x * y * z
-                if(weight_inp == preferred_input_size && weight_out == preferred_output_size){
-                    return 0;   // if already the same size.
-                }
-                while(weight_inp != preferred_input_size || weight_out != preferred_output_size){
-                    // try to resize both dimensions until successfully resized
+                def_uint_t new_weight_inp = 0;
 
+                for(int i = 0; i < this->input_layers.size(); i++){
+                    new_weight_inp += this->input_layers[i]->x * this->input_layers[i]->y * this->input_layers[i]->z;
                 }
-                return 1;
-            }else if(this->layer_type == Convolutional_INPUTS){
 
+                def_uint_t new_weight_out = this->x * this->y * this->z;
+
+                return grow_weights(new_weight_inp, new_weight_out, 1);
             }
-
-            // return 1;   // if had to resize.
-            // return 0;   // if already the same size.
-            return -1;  // if this size is smaller than preferred.
+            return 1;
         }
+
+        // def_uint_small_t resize_weight(def_uint_t preferred_input_size, def_uint_t preferred_output_size){
+        //     if(this->layer_type == Fully_Connected_INPUTS){
+        //         // weight_out must also equal x * y * z
+        //         if(weight_inp == preferred_input_size && weight_out == preferred_output_size){
+        //             return 0;   // if already the same size.
+        //         }
+        //         while(weight_inp != preferred_input_size || weight_out != preferred_output_size){
+        //             // try to resize both dimensions until successfully resized
+        //         }
+        //         return 1;
+        //     }else if(this->layer_type == Convolutional_INPUTS){
+        //     }
+        //     // return 1;   // if had to resize.
+        //     // return 0;   // if already the same size.
+        //     return -1;  // if this size is smaller than preferred.
+        // }
 
         def_uint_t get_id() {
             return this->id;
@@ -383,7 +402,9 @@ namespace std
             // check if it is not same as this
             this->input_layers.push_back(new_layer);
 
-            print_telm("Added input layer to layer " << this->id << " with id " << new_layer->get_id() << endl);
+            this->auto_grow_weight();
+
+            print_telm("Added layer(id=" << new_layer->id << ") to layer(id=" << this->id << ") as input." << endl);
             return 0;
         }
 
@@ -598,6 +619,13 @@ namespace std
             return empty_vector;
         }
 
+        /**
+         * @brief Calculate the backprop error for this layer.
+         * @param run_id The run_id of the current run.
+         * @param batch_size The batch size of the current run.
+         * @param activation_error The error of the next layer.\
+         * @param learning_rate The learning rate of the current run.
+        */
         vector<def_float_t> get_correct_error_rec(def_int_t run_id, def_uint_t batch_size, vector<def_float_t> activation_error, def_float_t learning_rate){
             if(!(this->being_corrected)){
                 this->being_corrected = 1;
