@@ -121,7 +121,7 @@ namespace std
 
         // FIXME:
         // stores the value of last activation
-        vector<vector<vector<def_float_t>>> cached_acivation_values;
+        vector<vector<vector<def_float_t>>> cached_activation_values;
 
 
         // FUTURE:
@@ -231,7 +231,7 @@ namespace std
         // pass the vector of cached values
         vector<vector<vector<def_float_t>>> get_cached_activation_values()
         {
-            return this->cached_acivation_values;
+            return this->cached_activation_values;
         }
 
         def_int_t add_input_layer(nlayer * new_layer)  // success = 0, failure = -1
@@ -245,7 +245,7 @@ namespace std
 
         vector<vector<vector<def_float_t>>> get_activation(def_int_t run_id){
             if(this->cached_run_id == run_id){
-                return cached_acivation_values;
+                return cached_activation_values;
             }
             
         }

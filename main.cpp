@@ -3,6 +3,7 @@
 #include<iostream>
 
 #include "modules/nlayer.hpp"
+#include "modules/nnetwork.hpp"
 
 // temporary testing only
 #define fori(i,n) for(int i = 0; i < n; i++)
@@ -27,7 +28,7 @@ int main(){
     layer1.is_input_layer=1;
     std::vector<float> input_values = {0.1,0.2,1,1,0.2,0.1};
 
-    layer1.cached_acivation_values = input_values;
+    layer1.cached_activation_values = input_values;
     layer1.cached_batch_size = 2;
 
     // layer3.id=3;
