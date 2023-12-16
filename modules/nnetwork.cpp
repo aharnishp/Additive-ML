@@ -89,6 +89,8 @@ class nnetwork{
     
     /**
      * @brief given the input_values, returns the predicted value of the network.
+     * @param input_values flattened 1D vector of the 2D array formed by input_layer.size * batch_size
+     * @param batch_size
     */
     std::vector<def_float_t> forward_prop(std::vector<def_float_t> input_values, def_uint_t batch_size) {
         /*
@@ -118,6 +120,27 @@ class nnetwork{
         this->input_layer->cached_batch_size = batch_size;
 
         this->output_layer->get_activation_rec(run_id,batch_size);
+
+        if(TELEMETRY == 2){
+            std::cout << "input_values.size()= " << input_values.size() << std::endl;
+            std::cout << "expected_values.size()= " << expected_values.size() << std::endl;
+        }
+
+        if(input_values.size() != this->input_layer->x * this->input_layer->y * this->input_layer->z * batch_size){
+            if(TELEMETRY){ 
+                std::cout << "ERROR: input_values dimension not correct. input_layer.size()*batch_size = " << this->input_layer->x * this->input_layer->y * this->input_layer->z * batch_size <<
+                " but input_values.size() = " << input_values.size() << std::endl; 
+            }
+            return {0};
+        }
+        if(expected_values.size() != this->output_layer->x * this->output_layer->y * this->output_layer->z * batch_size){
+            if(TELEMETRY){ 
+                std::cout << "ERROR: expected_values dimension not correct. output_layer.size()*batch_size = " << this->output_layer->x * this->output_layer->y * this->output_layer->z * batch_size <<
+                " but input_values.size() = " << expected_values.size() << std::endl; 
+            }
+            return {0};
+
+        }
 
         std::vector<def_float_t> error_in_prediction;
         // for(int i = 0; i < expected_values.size(); i++){

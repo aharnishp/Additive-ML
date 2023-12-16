@@ -1,6 +1,8 @@
 // g++ main.cpp -o main -Lmodules/
 
 #include<iostream>
+#include<fstream>
+#include<sstream>
 
 #include "modules/nlayer.hpp"
 #include "modules/nnetwork.hpp"
@@ -9,29 +11,106 @@
 #define fori(i,n) for(int i = 0; i < n; i++)
 #define pb push_back
 
+void print1D(std::vector<def_float_t> vec){
+    fori(i, vec.size()){
+        std::cout << vec[i] << " ";
+    }std::cout << std::endl;
+}
+
 int main(){
-    nnetwork n1(2,2,0.01);
-    std::vector<def_float_t> output_values = n1.forward_prop({0.1,0.2},1);
 
-    std::cout << "Printing output values" << std::endl;
-    fori(i, output_values.size()){
-        std::cout << output_values[i] << std::endl;
-    }
+    nnetwork mnist1(784, 10, 0.001);
+    mnist1.output_layer->activationFn=Sigmoid;
+    // mnist1.add_new_layer_at_last(10, ReLU, 0.01);
 
-    // backproping
-    std::vector<def_float_t> expected_values = {0.1,0.2};
-    fori(i,1000){
-        n1.backward_prop({0.1,0.2}, expected_values, 1);
+    std::vector<def_float_t> input_values(784, 0.1);
+
+    // read the input values from file
+    std::ifstream input_file("dataset/mnist-train.csv");
+    std::string line;
+    std::vector<std::string> input_lines;
+
+    // check if file has opened
+    if(!input_file.is_open()){
+        cout << "error: couldn't open the input_file." << endl;
+        return -1;
     }
     
-    output_values = n1.forward_prop({1,0},1);
 
-    std::cout << "Printing output values after training" << std::endl;
-    fori(i, output_values.size()){
-        std::cout << output_values[i] << std::endl;
+
+    // read every 8 lines and make a batch of it
+    def_uint_t train_batch_size = 8;
+    def_uint_t train_line_count = 0;
+
+    std::vector<def_float_t> training_batch;
+    std::vector<def_float_t> labels;
+
+    // read headers once
+    std::getline(input_file, line);
+    training_batch.reserve(784);
+
+    int batch_num = 0;
+
+
+    while(std::getline(input_file, line)){
+        // parse the line
+        std::stringstream ss(line);
+        std::string token;
+        
+        // first element is the label
+        std::getline(ss, token, ',');
+        // onehot encode the labels
+        std::vector<def_float_t> oneh(10,0);
+        int lab_num = stoi(token);
+        if(lab_num < 0 || lab_num > 9){
+            cout << "error: label number is not in range 0-9" << endl;
+            return -1;
+        }
+        oneh[stoi(token)] = 1;
+        
+        // insert the onehot vector to labels
+        labels.insert(labels.end(), oneh.begin(),oneh.end());
+
+        // labels.pb(std::stof(token));
+
+        def_int_t token_num = 0;
+
+        
+        // count the number of li
+        // rest of the elements are the input values
+        // std::vector<def_float_t> input_values;
+        while(std::getline(ss, token, ',')){
+            // std::cout << (token_num++) << ",\t" << train_line_count << std::endl;
+            training_batch.pb(std::stof(token));
+        }
+
+        std::cout << lab_num << "\t" << batch_num++ << std::endl;
+        training_batch.reserve(training_batch.size()+784);
+        // training_batch.resize(training_batch.size()+784);
+
+        train_line_count++;
+
+        if(train_line_count == train_batch_size){
+            cout << "training_batch.size() = " << training_batch.size() << endl;
+            // train the network
+            mnist1.backward_prop(training_batch, labels, train_line_count);
+            // reset the training batch
+            training_batch.clear();
+            labels.clear();
+
+            
+
+            train_line_count = 0;
+        }
     }
 
+    
+    // actual value is 4
+    input_values = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,220,179,6,0,0,0,0,0,0,0,0,9,77,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,28,247,17,0,0,0,0,0,0,0,0,27,202,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,242,155,0,0,0,0,0,0,0,0,27,254,63,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,160,207,6,0,0,0,0,0,0,0,27,254,65,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,127,254,21,0,0,0,0,0,0,0,20,239,65,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,77,254,21,0,0,0,0,0,0,0,0,195,65,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,70,254,21,0,0,0,0,0,0,0,0,195,142,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,56,251,21,0,0,0,0,0,0,0,0,195,227,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,222,153,5,0,0,0,0,0,0,0,120,240,13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,67,251,40,0,0,0,0,0,0,0,94,255,69,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,234,184,0,0,0,0,0,0,0,19,245,69,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,234,169,0,0,0,0,0,0,0,3,199,182,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,154,205,4,0,0,26,72,128,203,208,254,254,131,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,61,254,129,113,186,245,251,189,75,56,136,254,73,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15,216,233,233,159,104,52,0,0,0,38,254,73,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,18,254,73,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,18,254,73,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,206,106,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,186,159,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,209,101,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
+    std::vector<def_float_t> predictions = mnist1.forward_prop(input_values, 1);
+    print1D(predictions);
+    
     return 0;
 }
 
