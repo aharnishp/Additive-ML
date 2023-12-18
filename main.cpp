@@ -47,9 +47,9 @@ void print_architecture(nnetwork nn){
 
 int main(){
 
-    nnetwork mnist1(784, 10, 0.00390625);
+    nnetwork mnist1(784, 10, 0.015625);
     mnist1.output_layer->activationFn=Softmax;
-    mnist1.add_layer_between_output(10,ReLU,0.00390625);
+    // mnist1.add_layer_between_output(10,ReLU,0.015625);
 
     std::cout << "### ARCHITECTURE ###" << std::endl;
     print_architecture(mnist1);
@@ -62,16 +62,6 @@ int main(){
 
 
     if(1){
-        // // add hidden node
-        // nlayer hidden(16, ReLU, 0.005);     // FIXME: is stack allocated for now in main
-        // hidden.input_layers = mnist1.output_layer->input_layers;
-        // mnist1.output_layer->input_layers.clear();
-        // mnist1.output_layer->add_input_layer(&hidden);
-        // mnist1.output_layer->init_weight(1);
-        // hidden.init_weight(1);
-        // mnist1.add_new_layer_at_last(10, Sigmoid, 0.01);
-
-
         std::vector<def_float_t> input_values(784, 0.1);
 
         // read the input values from file
@@ -133,7 +123,7 @@ int main(){
             // std::vector<def_float_t> input_values;
             while(std::getline(ss, token, ',')){
                 // std::cout << (token_num++) << ",\t" << train_line_count << std::endl;
-                training_batch.pb(std::stof(token));
+                training_batch.pb(std::stof(token)/255.0);
             }
 
             std::cout << lab_num << "\t" << batch_num++ << std::endl;
@@ -143,6 +133,9 @@ int main(){
             train_line_count++;
 
             if(train_line_count == train_batch_size){
+                if(batch_num > 700){
+                    std::cout << "REACHED" << std::endl;
+                }
                 cout << "training_batch.size() = " << training_batch.size() << endl;
                 // train the network
                 mnist1.backward_prop(training_batch, labels, train_line_count);
@@ -162,13 +155,11 @@ int main(){
 
         std::cout << "RUNID=" << mnist1.get_run_id() << std::endl;
         
-        std::cout << "Prediction matrix for 4" << std::endl;
         std::vector<def_float_t> predictions = mnist1.forward_prop(input_values, 1);
+        std::cout << "Prediction matrix for 4" << std::endl;
         print1D(predictions);
         
         std::cout << "RUNID=" << mnist1.get_run_id() << std::endl;
-
-        // mnist1.input_layer->weights
 
         // actual value is 5
         input_values = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,149,156,179,254,254,201,119,46,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,147,241,253,253,254,253,253,253,253,245,160,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,31,224,253,253,180,174,175,174,174,174,174,223,247,145,6,0,0,0,0,0,0,0,0,0,0,0,0,7,197,254,253,165,2,0,0,0,0,0,0,12,102,184,16,0,0,0,0,0,0,0,0,0,0,0,0,152,253,254,162,18,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,235,254,158,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,74,250,253,15,0,0,0,16,20,19,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,199,253,253,0,0,25,130,235,254,247,145,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,20,253,253,177,100,219,240,253,253,254,253,253,125,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,193,253,253,254,253,253,200,155,155,238,253,229,23,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,61,249,254,241,150,30,0,0,0,215,254,254,58,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,36,39,30,0,0,0,0,0,214,253,234,31,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,241,253,183,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,201,253,253,102,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,114,254,253,154,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,62,254,255,241,30,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,118,235,253,249,103,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,55,81,0,102,211,253,253,253,135,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,79,243,234,254,253,253,216,117,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,48,245,253,254,207,126,27,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -183,13 +174,15 @@ int main(){
 
     print_architecture(mnist1);
 
-    std::cout << "printing weights & biases" << std::endl;
-    print1D(mnist1.output_layer->weights);
+    // std::cout << "hidden layer weights" << std::endl;
+    // print1D(mnist1.output_layer->input_layers[0]->weights);
+    // std::cout << "hidden layer activations" << std::endl;
+    // print1D(mnist1.output_layer->input_layers[0]->cached_activation_values);
 
-    std::cout << "hidden weights" << std::endl;
-    print1D(mnist1.output_layer->input_layers[0]->weights);
-    std::cout << "hidden activations" << std::endl;
-    print1D(mnist1.output_layer->input_layers[0]->cached_activation_values);
+    std::cout << "printing output layer weights" << std::endl;
+    print1D(mnist1.output_layer->weights);
+    std::cout << "printing output layer biases" << std::endl;
+
 
     // std::cout << "input cached" << std::endl;
     // print1D(mnist1.output_layer->input_layers[0]->input_layers[0]->cached_activation_values);

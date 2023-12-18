@@ -186,15 +186,8 @@ class nnetwork{
 
         for(int i = 0; i < expected_values.size(); i++){
             error_in_prediction.push_back(this->output_layer->cached_activation_values[i] - expected_values[i]);
-            // error_in_prediction.push_back(this->output_layer->cached_activation_values[i] - expected_values[i]);
+            // error_in_prediction.push_back(expected_values[i] - this->output_layer->cached_activation_values[i]);
         }
-
-        // cout << "this" << this << endl;
-        // cout << "this->output_layer->id=" << this->output_layer->id << endl;
-
-        // cout << "run_id=" << run_id << endl;
-        // cout << "batch_size=" << batch_size << endl;
-        // cout << "error_in_prediction.size()=" << error_in_prediction.size() << endl;
         
         // print error_in_prediction
         print1D(error_in_prediction);
@@ -208,35 +201,40 @@ class nnetwork{
         return error_in_prediction;
     }
 
+
+
+
+
+
+
+
+
     void print_architecture(){
-    std::cout << "printing nnetwork architecture" << std::endl;
-    // std::cout << "Output size" << this->output_layer->size() << std::endl;
-    // std::cout << 
-    std::set<nlayer*> visited;
-    std::vector<nlayer*> unvisited;
-    unvisited.push_back(this->output_layer);
-    while(unvisited.size()){
-        nlayer* this_layer = unvisited[unvisited.size()-1];
-        unvisited.pop_back();   // remove from last
-        std::cout << "# layer-id=" << this_layer->id << " \tlayer-size=" << this_layer->size() << " \tinput_layers:" << std::endl;
-        std::cout << "    printing weights(" << this_layer->weight_inp << " x " << this_layer->weight_out << ")" << std::endl;
+        std::cout << "printing nnetwork architecture" << std::endl;
+        std::set<nlayer*> visited;
+        std::vector<nlayer*> unvisited;
+        unvisited.push_back(this->output_layer);
+        while(unvisited.size()){
+            nlayer* this_layer = unvisited[unvisited.size()-1];
+            unvisited.pop_back();   // remove from last
+            std::cout << "# layer-id=" << this_layer->id << " \tlayer-size=" << this_layer->size() << " \tinput_layers:" << std::endl;
+            std::cout << "    printing weights(" << this_layer->weight_inp << " x " << this_layer->weight_out << ")" << std::endl;
 
 
-        for(int i = 0; i < this_layer->input_layers.size(); i++){
-            std::cout << "    -layer"  << this_layer->input_layers[i]->id << std::endl;
-            if(visited.find(this_layer->input_layers[i]) == visited.end()){
-                unvisited.push_back(this_layer->input_layers[i]);
+            for(int i = 0; i < this_layer->input_layers.size(); i++){
+                std::cout << "    -layer"  << this_layer->input_layers[i]->id << std::endl;
+                if(visited.find(this_layer->input_layers[i]) == visited.end()){
+                    unvisited.push_back(this_layer->input_layers[i]);
+                }
             }
+            visited.insert(this_layer);
         }
-        visited.insert(this_layer);
 
-        // std::cout << "layer-" << std::endl;
     }
-
-}
 
 
     def_uint_small_t export_nnetwork(string filepath){
+        string File_Header;
 
         return 0;
     }
