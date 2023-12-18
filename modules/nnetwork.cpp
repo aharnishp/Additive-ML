@@ -128,7 +128,7 @@ class nnetwork{
      * @param input_values flattened 1D vector of the 2D array formed by input_layer.size * batch_size
      * @param batch_size
     */
-    std::vector<def_float_t> forward_prop(std::vector<def_float_t> input_values, def_uint_t batch_size) {
+    std::vector<def_float_t> forward_prop(std::vector<def_float_t>& input_values, def_uint_t batch_size) {
         /*
         returns the predicted value of the network for the given input value.
         (returned value is flattened 1D array of output_layer.size * batch_size
@@ -149,7 +149,7 @@ class nnetwork{
      * @param expected_values flattened 1D vector of the 2D array formed by output_layer.size * batch_size
      * @param batch_size
     */
-    std::vector<def_float_t> backward_prop(std::vector<def_float_t> input_values, std::vector<def_float_t> expected_values, def_uint_t batch_size) {
+    std::vector<def_float_t> backward_prop(std::vector<def_float_t>& input_values, std::vector<def_float_t>& expected_values, def_uint_t batch_size) {
 
         run_id++;
         this->input_layer->cached_activation_values = input_values;

@@ -16,7 +16,7 @@
 // #define pb push_back
 
 //// Compile Time Parameters 
-#define Low_Memory_Target 0
+// #define Low_Memory_Target
 
 
 // Compile Parameter Code
@@ -620,7 +620,7 @@ public:
      * @param activation_error The error of the next layer.\
      * @param learning_rate The learning rate of the current run.
     */
-    std::vector<def_float_t> get_correct_error_rec(def_int_t run_id, def_uint_t batch_size, std::vector<def_float_t> activation_error, def_float_t learning_rate){
+    std::vector<def_float_t> get_correct_error_rec(def_int_t run_id, def_uint_t batch_size, std::vector<def_float_t>& activation_error, def_float_t learning_rate){
         if(!(this->being_corrected)){
             this->being_corrected = 1;
         }else{
