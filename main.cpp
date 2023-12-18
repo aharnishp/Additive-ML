@@ -47,9 +47,9 @@ void print_architecture(nnetwork nn){
 
 int main(){
 
-    nnetwork mnist1(784, 10, 0.005);
+    nnetwork mnist1(784, 10, 0.00390625);
     mnist1.output_layer->activationFn=Softmax;
-    mnist1.add_layer_between_output(10,ReLU,0.00005);
+    mnist1.add_layer_between_output(10,ReLU,0.00390625);
 
     std::cout << "### ARCHITECTURE ###" << std::endl;
     print_architecture(mnist1);

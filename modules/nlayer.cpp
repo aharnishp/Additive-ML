@@ -258,7 +258,15 @@ namespace std
                     return 1;
                 }
 
-                if(random_values && this->activationFn == ReLU){
+                def_uint_small_t has_relu = 0;
+                // check if input layers include any ReLU layer
+                for(int i = 0; i < this->input_layers.size(); i++){
+                    if(this->input_layers[i]->activationFn == ReLU){
+                        has_relu = 1;
+                        break;
+                    }
+                }
+                if(random_values && has_relu){
                     // He initialization
                     def_float_t std_dev = sqrt(2.0/this->weight_inp); 
                     // Fill weights with random values based on the seed and normal distribution
@@ -281,14 +289,15 @@ namespace std
                 this->bias.clear();
                 this->bias.reserve(weight_out);
                 for (int i = 0; i < weight_out; i++) {
-                    this->bias.push_back(get_rand_float_seeded(rand_seed++));
+                    this->bias.push_back(0);
+                    // this->bias.push_back(get_rand_float_seeded(rand_seed++));
                 }
                 
             }
             return 0;
         }
 
-        void apply_activation_fn(std::vector<def_float_t>& input_vector){
+        void apply_activation_fn(std::vector<def_float_t>& input_vector, def_uint_t batch_size){
             if(this->activationFn == ReLU){
                 // cblas_d
                 #if USE_OPEN_BLAS
@@ -311,13 +320,27 @@ namespace std
                     input_vector[i] = 1/(1 + exp(-input_vector[i]));
                 }
             }else if(this->activationFn == Softmax){
-                def_float_t sum = 0;
-                for(int i = 0; i < input_vector.size(); i++){
-                    sum += exp(input_vector[i]);
-                }
+                // perform the softmax batch-wise
+                for(int batch = 0; batch < batch_size; batch++){
+                    def_float_t batch_start = batch * (input_vector.size()/batch_size);
+                    def_float_t batch_end = (batch + 1) * (input_vector.size()/batch_size); // excluding this index
+                    def_float_t sum = 0;
+                    // def_float_t max
+                    def_float_t max_element = -INFINITY;
+                    // shift the values by subtracting max of all
+                    for(int i = batch_start; i < batch_end; i++){ // TODO: potential bottleneck here
+                        if(max_element < input_vector[i]){
+                            max_element = input_vector[i];
+                        }
+                    }
+                    for(int i = batch_start; i < batch_end; i++){   // may be parallelised
+                        input_vector[i] -= max_element;
+                        sum += exp(input_vector[i]);
+                    }
 
-                for(int i = 0; i < input_vector.size(); i++){
-                    input_vector[i] = exp(input_vector[i])/sum;
+                    for(int i = batch_start; i < batch_end; i++){   // can be parallelised
+                        input_vector[i] = exp(input_vector[i])/sum;
+                    }
                 }
             // }else if(this->activationFn == Linear){
             }
@@ -563,7 +586,7 @@ namespace std
                     #else
 
                         // printing this->weights
-                        std::cout << "&this=  \t" << this << std::endl;
+                        std::cout << "&this(id)= " << id << "  \t" << this << std::endl;
                         std::cout << "this->weight_inp=" << this->weight_inp << "\t this->weight_out=" << this->weight_out << std::endl;
                         std::cout << "this->weights.size=" << this->weights.size() << "\t this->weights flattened values=" << std::endl;
                         if(TELEMETRY == 2) {for(int i = 0; i < this->weights.size(); i++){ 
@@ -591,7 +614,7 @@ namespace std
 
                     // apply activation function
                     // output_vector = get_activation_Fn_value(output_vector);
-                    apply_activation_fn(output_vector);
+                    apply_activation_fn(output_vector, batch_size);
 
                     // store copy of outputs to cache 
                     this->cached_run_id = run_id;
@@ -905,9 +928,9 @@ namespace std
                     }
 
                     // // update bias
-                    // for(int i = 0; i < weight_out; i++){
-                    //     this->bias[i] -= delta_bias[i] * learning_rate;
-                    // }
+                    for(int i = 0; i < weight_out; i++){
+                        this->bias[i] -= delta_bias[i] * learning_rate;
+                    }
 
                     // input_dz = (W.T x dZ) * g'(Z)
 
