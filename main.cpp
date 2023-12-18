@@ -3,6 +3,7 @@
 #include<iostream>
 #include<fstream>
 #include<sstream>
+#include<set>
 
 #include "modules/nlayer.hpp"
 #include "modules/nnetwork.hpp"
@@ -17,99 +18,187 @@ void print1D(std::vector<def_float_t> vec){
     }std::cout << std::endl;
 }
 
+void print_architecture(nnetwork nn){
+    std::cout << "printing nnetwork architecture" << std::endl;
+    std::cout << "Output size" << nn.output_layer->size() << std::endl;
+    // std::cout << 
+    std::set<nlayer*> visited;
+    std::vector<nlayer*> unvisited;
+    unvisited.push_back(nn.output_layer);
+    while(unvisited.size()){
+        nlayer* this_layer = unvisited[unvisited.size()-1];
+        unvisited.pop_back();   // remove from last
+        std::cout << "# layer-id=" << this_layer->id << " \tlayer-size=" << this_layer->size() << " \tinput_layers:" << std::endl;
+        std::cout << "    printing weights(" << this_layer->weight_inp << " x " << this_layer->weight_out << ")" << std::endl;
+
+
+        for(int i = 0; i < this_layer->input_layers.size(); i++){
+            std::cout << "    -layer"  << this_layer->input_layers[i]->id << std::endl;
+            if(visited.find(this_layer->input_layers[i]) == visited.end()){
+                unvisited.push_back(this_layer->input_layers[i]);
+            }
+        }
+        visited.insert(this_layer);
+
+        // std::cout << "layer-" << std::endl;
+    }
+
+}
+
 int main(){
 
-    nnetwork mnist1(784, 10, 0.001);
-    mnist1.output_layer->activationFn=Sigmoid;
-    // mnist1.add_new_layer_at_last(10, ReLU, 0.01);
+    nnetwork mnist1(784, 10, 0.005);
+    mnist1.output_layer->activationFn=Softmax;
+    mnist1.add_layer_between_output(10,ReLU,0.00005);
 
-    std::vector<def_float_t> input_values(784, 0.1);
-
-    // read the input values from file
-    std::ifstream input_file("dataset/mnist-train.csv");
-    std::string line;
-    std::vector<std::string> input_lines;
-
-    // check if file has opened
-    if(!input_file.is_open()){
-        cout << "error: couldn't open the input_file." << endl;
-        return -1;
-    }
-    
+    std::cout << "### ARCHITECTURE ###" << std::endl;
+    print_architecture(mnist1);
+    std::cout << "" << std::endl;
 
 
-    // read every 8 lines and make a batch of it
-    def_uint_t train_batch_size = 8;
-    def_uint_t train_line_count = 0;
-
-    std::vector<def_float_t> training_batch;
-    std::vector<def_float_t> labels;
-
-    // read headers once
-    std::getline(input_file, line);
-    training_batch.reserve(784);
-
-    int batch_num = 0;
+    std::cout << "output_layer->x = " << mnist1.output_layer->x << std::endl;
+    std::cout << "hidden->x = " << mnist1.output_layer->input_layers[0]->x << std::endl;
+    std::cout << "input_layer->x = " << mnist1.input_layer->x << std::endl;
 
 
-    while(std::getline(input_file, line)){
-        // parse the line
-        std::stringstream ss(line);
-        std::string token;
-        
-        // first element is the label
-        std::getline(ss, token, ',');
-        // onehot encode the labels
-        std::vector<def_float_t> oneh(10,0);
-        int lab_num = stoi(token);
-        if(lab_num < 0 || lab_num > 9){
-            cout << "error: label number is not in range 0-9" << endl;
+    if(1){
+        // // add hidden node
+        // nlayer hidden(16, ReLU, 0.005);     // FIXME: is stack allocated for now in main
+        // hidden.input_layers = mnist1.output_layer->input_layers;
+        // mnist1.output_layer->input_layers.clear();
+        // mnist1.output_layer->add_input_layer(&hidden);
+        // mnist1.output_layer->init_weight(1);
+        // hidden.init_weight(1);
+        // mnist1.add_new_layer_at_last(10, Sigmoid, 0.01);
+
+
+        std::vector<def_float_t> input_values(784, 0.1);
+
+        // read the input values from file
+        std::ifstream input_file("dataset/mnist-train.csv");
+        std::string line;
+        std::vector<std::string> input_lines;
+
+        // check if file has opened
+        if(!input_file.is_open()){
+            cout << "error: couldn't open the input_file." << endl;
             return -1;
         }
-        oneh[stoi(token)] = 1;
         
-        // insert the onehot vector to labels
-        labels.insert(labels.end(), oneh.begin(),oneh.end());
 
-        // labels.pb(std::stof(token));
 
-        def_int_t token_num = 0;
+        // read every 8 lines and make a batch of it
+        def_uint_t train_batch_size = 8;
+        def_uint_t train_line_count = 0;
 
-        
-        // count the number of li
-        // rest of the elements are the input values
-        // std::vector<def_float_t> input_values;
-        while(std::getline(ss, token, ',')){
-            // std::cout << (token_num++) << ",\t" << train_line_count << std::endl;
-            training_batch.pb(std::stof(token));
-        }
+        std::vector<def_float_t> training_batch;
+        std::vector<def_float_t> labels;
 
-        std::cout << lab_num << "\t" << batch_num++ << std::endl;
-        training_batch.reserve(training_batch.size()+784);
-        // training_batch.resize(training_batch.size()+784);
+        // read headers once
+        std::getline(input_file, line);
+        training_batch.reserve(784);
 
-        train_line_count++;
+        int batch_num = 0;
 
-        if(train_line_count == train_batch_size){
-            cout << "training_batch.size() = " << training_batch.size() << endl;
-            // train the network
-            mnist1.backward_prop(training_batch, labels, train_line_count);
-            // reset the training batch
-            training_batch.clear();
-            labels.clear();
+
+        while(std::getline(input_file, line)){
+            // parse the line
+            std::stringstream ss(line);
+            std::string token;
+            
+            // first element is the label
+            std::getline(ss, token, ',');
+            // onehot encode the labels
+            std::vector<def_float_t> oneh(10,0);
+            int lab_num = stoi(token);
+            if(lab_num < 0 || lab_num > 9){
+                cout << "error: label number is not in range 0-9" << endl;
+                return -1;
+            }
+            oneh[stoi(token)] = 1;
+
+            // print1D(oneh);
+            // std::cout << oneh << std::endl;
+            
+            // insert the onehot vector to labels
+            labels.insert(labels.end(), oneh.begin(),oneh.end());
+
+            // labels.pb(std::stof(token));
+
+            def_int_t token_num = 0;
 
             
+            // count the number of li
+            // rest of the elements are the input values
+            // std::vector<def_float_t> input_values;
+            while(std::getline(ss, token, ',')){
+                // std::cout << (token_num++) << ",\t" << train_line_count << std::endl;
+                training_batch.pb(std::stof(token));
+            }
 
-            train_line_count = 0;
+            std::cout << lab_num << "\t" << batch_num++ << std::endl;
+            training_batch.reserve(training_batch.size()+784);
+            // training_batch.resize(training_batch.size()+784);
+
+            train_line_count++;
+
+            if(train_line_count == train_batch_size){
+                cout << "training_batch.size() = " << training_batch.size() << endl;
+                // train the network
+                mnist1.backward_prop(training_batch, labels, train_line_count);
+                // reset the training batch
+                training_batch.clear();
+                labels.clear();
+
+                
+
+                train_line_count = 0;
+            }
         }
+
+        
+        // actual value is 4
+        input_values = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,220,179,6,0,0,0,0,0,0,0,0,9,77,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,28,247,17,0,0,0,0,0,0,0,0,27,202,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,242,155,0,0,0,0,0,0,0,0,27,254,63,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,160,207,6,0,0,0,0,0,0,0,27,254,65,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,127,254,21,0,0,0,0,0,0,0,20,239,65,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,77,254,21,0,0,0,0,0,0,0,0,195,65,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,70,254,21,0,0,0,0,0,0,0,0,195,142,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,56,251,21,0,0,0,0,0,0,0,0,195,227,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,222,153,5,0,0,0,0,0,0,0,120,240,13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,67,251,40,0,0,0,0,0,0,0,94,255,69,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,234,184,0,0,0,0,0,0,0,19,245,69,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,234,169,0,0,0,0,0,0,0,3,199,182,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,154,205,4,0,0,26,72,128,203,208,254,254,131,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,61,254,129,113,186,245,251,189,75,56,136,254,73,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15,216,233,233,159,104,52,0,0,0,38,254,73,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,18,254,73,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,18,254,73,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,206,106,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,186,159,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,209,101,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+        std::cout << "RUNID=" << mnist1.get_run_id() << std::endl;
+        
+        std::cout << "Prediction matrix for 4" << std::endl;
+        std::vector<def_float_t> predictions = mnist1.forward_prop(input_values, 1);
+        print1D(predictions);
+        
+        std::cout << "RUNID=" << mnist1.get_run_id() << std::endl;
+
+        // mnist1.input_layer->weights
+
+        // actual value is 5
+        input_values = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,149,156,179,254,254,201,119,46,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,147,241,253,253,254,253,253,253,253,245,160,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,31,224,253,253,180,174,175,174,174,174,174,223,247,145,6,0,0,0,0,0,0,0,0,0,0,0,0,7,197,254,253,165,2,0,0,0,0,0,0,12,102,184,16,0,0,0,0,0,0,0,0,0,0,0,0,152,253,254,162,18,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,235,254,158,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,74,250,253,15,0,0,0,16,20,19,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,199,253,253,0,0,25,130,235,254,247,145,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,20,253,253,177,100,219,240,253,253,254,253,253,125,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,193,253,253,254,253,253,200,155,155,238,253,229,23,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,61,249,254,241,150,30,0,0,0,215,254,254,58,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,36,39,30,0,0,0,0,0,214,253,234,31,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,241,253,183,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,201,253,253,102,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,114,254,253,154,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,62,254,255,241,30,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,118,235,253,249,103,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,55,81,0,102,211,253,253,253,135,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,79,243,234,254,253,253,216,117,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,48,245,253,254,207,126,27,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+        predictions = mnist1.forward_prop(input_values, 1);
+        std::cout << "Prediction matrix for 5" << std::endl;
+        print1D(predictions);
+
+        std::cout << "RUNID=" << mnist1.get_run_id() << std::endl;
+        
     }
 
-    
-    // actual value is 4
-    input_values = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,220,179,6,0,0,0,0,0,0,0,0,9,77,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,28,247,17,0,0,0,0,0,0,0,0,27,202,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,242,155,0,0,0,0,0,0,0,0,27,254,63,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,160,207,6,0,0,0,0,0,0,0,27,254,65,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,127,254,21,0,0,0,0,0,0,0,20,239,65,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,77,254,21,0,0,0,0,0,0,0,0,195,65,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,70,254,21,0,0,0,0,0,0,0,0,195,142,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,56,251,21,0,0,0,0,0,0,0,0,195,227,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,222,153,5,0,0,0,0,0,0,0,120,240,13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,67,251,40,0,0,0,0,0,0,0,94,255,69,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,234,184,0,0,0,0,0,0,0,19,245,69,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,234,169,0,0,0,0,0,0,0,3,199,182,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,154,205,4,0,0,26,72,128,203,208,254,254,131,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,61,254,129,113,186,245,251,189,75,56,136,254,73,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15,216,233,233,159,104,52,0,0,0,38,254,73,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,18,254,73,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,18,254,73,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,206,106,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,186,159,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,209,101,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    print_architecture(mnist1);
 
-    std::vector<def_float_t> predictions = mnist1.forward_prop(input_values, 1);
-    print1D(predictions);
+    std::cout << "printing weights & biases" << std::endl;
+    print1D(mnist1.output_layer->weights);
+
+    std::cout << "hidden weights" << std::endl;
+    print1D(mnist1.output_layer->input_layers[0]->weights);
+    std::cout << "hidden activations" << std::endl;
+    print1D(mnist1.output_layer->input_layers[0]->cached_activation_values);
+
+    // std::cout << "input cached" << std::endl;
+    // print1D(mnist1.output_layer->input_layers[0]->input_layers[0]->cached_activation_values);
+
+    print1D(mnist1.output_layer->bias);
+
+    // std::vector<def_float_t> myvec = {0.1,0.2};
+    // mnist1.output_layer->apply_activation_fn(myvec);
+
     
     return 0;
 }

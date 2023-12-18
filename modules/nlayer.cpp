@@ -16,17 +16,15 @@
 // #define pb push_back
 
 //// Compile Time Parameters 
-#define Low_Memory_Target 1
+#define Low_Memory_Target 0
 
 
 // Compile Parameter Code
 #ifdef Low_Memory_Target
-  // float is 4 bytes
   #define def_float_t float
   #define def_uint_small_t __UINT8_TYPE__
   #define def_uint_t __UINT16_TYPE__
   #define def_int_t __INT16_TYPE__
-  
 #else
   // float is 8 bytes
   #define def_float_t double
@@ -325,6 +323,14 @@ namespace std
             }
         }
 
+        def_int_t size(){
+            if(Fully_Connected_INPUTS){
+                return this->x * this->y * this->z;
+            }else{
+                return this->x * this->y * this->z;
+            }
+        }
+
         void multiply_activation_derivative_fn(std::vector<def_float_t>& input_vector){
             
             #if USE_OPEN_BLAS
@@ -352,11 +358,15 @@ namespace std
                             input_vector[i] = 0;
                         }
                     }
-                }else if(this->activationFn == Exponential){
+                }else if(this->activationFn == Exponential){    // FIXME:
                     std::cout << "Currently not supporting back prop on exponential activation fn" << std::endl;
                     // for(int i = 0; i < input_vector.size(); i++){   // SIMD
                         
                     // }
+                }else if(this->activationFn == Sigmoid){        // FIXME:
+                    
+                }else if(this->activationFn == Softmax){
+                    
                 }
             #endif
         }
@@ -562,7 +572,7 @@ namespace std
 
                         for (int batch = 0; batch < batch_size; batch++) {
                             for (int out = 0; out < weight_out; out++) {
-                                float result = 0.0f;
+                                def_float_t result = 0.0f;
                                 for (int in = 0; in < weight_inp; in++) {
                                     result += input_activations[batch * weight_inp + in] * this->weights[in * weight_out + out];
                                 }
@@ -838,7 +848,7 @@ namespace std
                     std::vector<def_float_t> delta_weight;   // the dimensions are same as weights matrix
                     delta_weight.reserve(this->weight_inp * this->weight_out);
 
-                    def_float_t reci_batch_size = 1/batch_size;
+                    def_float_t reci_batch_size = 1.0/batch_size;
                     
                     // Matrix Multiply to get delta_weights
                     def_float_t sum = 0;
@@ -944,9 +954,22 @@ namespace std
                             def_int_t start_range = start_inp + batch * this->weight_inp;
                             def_int_t end_range = end_inp + batch * this->weight_inp;
 
-                            this_errors.insert(this_errors.end(),
-                                input_error.begin() + start_range * sizeof(def_float_t),
-                                input_error.begin() + (end_range + 1) * sizeof(def_float_t));
+                            if(TELEMETRY == 2){
+                                std::cout << "input_error.size()=" << input_error.size() << std::endl;
+                                std::cout << "this_errors.size()=" << this_errors.size() << std::endl;
+                            }
+
+                            // FIXME: faster method crashes with larger array sizes
+                            // pasting behind the array this_errors
+                            // this_errors.insert(this_errors.end(),
+                            //     input_error.begin() + start_range * sizeof(def_float_t),
+                            //     input_error.begin() + (end_range + 1) * sizeof(def_float_t));
+
+                            // inserting manually
+                            for(int el = 0; el < input_error.size(); el++){
+                                this_errors.push_back(input_error[el]);
+                            }
+
                         }
 
                         this->input_layers[i]->get_correct_error_rec(run_id, batch_size, this_errors, learning_rate);

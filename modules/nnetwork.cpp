@@ -7,6 +7,7 @@
 #include <vector>
 #include <algorithm>
 
+// #define def_float_t double
 
 
 using namespace std;
@@ -66,6 +67,31 @@ class nnetwork{
     }
 
     /**
+     * @brief adds a new fully connected layer just before the output layer
+     * @param layer_size size of the new layer (assumming fully connected)
+     * @param activation_function activation function of the new layer
+     * @param learning_rate learning rate of the new layer
+    */
+    def_uint_t add_layer_between_output(def_uint_t layer_size, activation_fn_t activation_function, def_float_t learning_rate){
+        /*
+        adds a new layer at the end of the network.
+        returns the id of the newly added layer.
+        */
+        nlayer *new_layer = new nlayer(layer_size, activation_function, learning_rate);
+        
+        new_layer->id = next_assigning_id;
+        next_assigning_id++;
+
+        new_layer->input_layers = this->output_layer->input_layers;
+        this->output_layer->input_layers =  {new_layer};
+        new_layer->auto_grow_weight();
+        output_layer->weights.clear();
+        output_layer->weight_inp = new_layer->size();
+        output_layer->weight_out = output_layer->size();
+        return new_layer->id;
+    }
+
+    /**
      * @brief adds a new layer just before and connected to the output layer of network.
      * @param layer_size size of the new layer (assumming fully connected)
      * @param activation_function activation function of the new layer
@@ -81,6 +107,9 @@ class nnetwork{
         new_layer->id = next_assigning_id;
         next_assigning_id++;
 
+        // new_layer->input_layers = this->output_layer->input_layers);
+        // new_layer->init_weight(1);
+        // this->output_layer = new_layer;
         new_layer->add_input_layer(this->output_layer);
         new_layer->init_weight(1);
         this->output_layer = new_layer;
