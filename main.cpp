@@ -12,6 +12,12 @@
 #define fori(i,n) for(int i = 0; i < n; i++)
 #define pb push_back
 
+
+#define train_test_batch_size 1
+
+
+
+
 void print1D(std::vector<def_float_t> vec){
     fori(i, vec.size()){
         std::cout << vec[i] << " ";
@@ -47,10 +53,12 @@ void print_architecture(nnetwork nn){
 
 int main(){
 
-    nnetwork mnist1(784, 10, 0.015625);
+    nnetwork mnist1(784, 10, 0.015625*2);
     mnist1.output_layer->activationFn=Softmax;
-    mnist1.add_layer_between_output(32,ReLU,0.015625);
-    mnist1.add_layer_between_output(16,ReLU,0.015625);
+    // mnist1.add_layer_between_output(64,LReLU,0.015625*2);
+    mnist1.add_layer_between_output(32,LReLU,0.015625*2);
+
+    // mnist1.add_layer_between_output(16,ReLU,0.015625/2);
 
     std::cout << "### ARCHITECTURE ###" << std::endl;
     print_architecture(mnist1);
@@ -79,7 +87,7 @@ int main(){
 
 
         // read every 8 lines and make a batch of it
-        def_uint_t train_batch_size = 8;
+        def_uint_t train_batch_size = train_test_batch_size;
         def_uint_t train_line_count = 0;
 
         std::vector<def_float_t> training_batch;
@@ -183,11 +191,13 @@ int main(){
         std::vector<def_float_t> test_labels;
         std::getline(test_file, line);
         test_batch.reserve(784);
-        def_uint_t test_batch_size = 8;
+        def_uint_t test_batch_size = 1;
         def_uint_t test_line_count = 0;
         train_iter = 0;
 
         def_int_t total_correct = 0;
+
+        // mnist1.output_layer->bias[1] = -0.1;
 
 
         while(std::getline(test_file, line)){
@@ -233,29 +243,35 @@ int main(){
 
             // check accuracy after every 8 lines
             if(test_line_count == test_batch_size){
-                mnist1.forward_prop(test_batch, test_batch_size);
+                std::vector<def_float_t> predictions = mnist1.forward_prop(test_batch, test_batch_size);
                 test_batch.clear();
 
                 // compare the results
                 def_uint_t correct_count = 0;
-                fori(i, test_labels.size()){
-                    def_float_t max_val = 0;
-                    def_uint_t max_idx = 0;
-                    fori(j, 10){
-                        if(mnist1.output_layer->cached_activation_values[i*10+j] > max_val){
-                            max_val = mnist1.output_layer->cached_activation_values[i*10+j];
-                            max_idx = j;
+                fori(i, test_batch_size){
+                    def_int_t batch_start = i*10;
+                    def_int_t batch_end = batch_start + 10;
+                    def_int_t max_index = 0;
+                    def_float_t max_value = predictions[batch_start];
+                    for(int j = batch_start+1; j < batch_end; j++){
+                        if(predictions[j] > max_value){
+                            max_value = predictions[j];
+                            max_index = j;
                         }
                     }
-                    if(test_labels[i*10+max_idx] == 1){
+                    std::cout << "pred=" << max_index << " \t corr=" << test_labels[max_index] << std::endl;
+                    if(test_labels[max_index] == 1){
                         correct_count++;
                     }
                 }
+                                
                 total_correct += correct_count;
                 std::cout << "Accuracy = " << (correct_count*100.0)/test_batch_size << std::endl;
-                if(train_iter > 100){
-                    break;
-                }
+                test_labels.clear();
+
+                // if(train_iter > 100){
+                //     break;
+                // }
                 test_line_count = 0;
                 
             }

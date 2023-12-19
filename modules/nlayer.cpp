@@ -16,7 +16,7 @@
 // #define pb push_back
 
 //// Compile Time Parameters 
-// #define Low_Memory_Target
+// #define Low_Memory_Target 0
 
 
 // Compile Parameter Code
@@ -46,8 +46,11 @@ typedef enum {
     Linear = 1,
     Sigmoid = 2,
     Exponential = 3,
-    Softmax = 4
+    Softmax = 4,
+    LReLU = 5
 } activation_fn_t;
+
+#define leaky_relu_slope 0.01
 
 
 // Settings
@@ -261,13 +264,15 @@ public:
             def_uint_small_t has_relu = 0;
             // check if input layers include any ReLU layer
             for(int i = 0; i < this->input_layers.size(); i++){
-                if(this->input_layers[i]->activationFn == ReLU){
+                if(this->input_layers[i]->activationFn == ReLU || this->input_layers[i]->activationFn == LReLU){
                     has_relu = 1;
                     break;
                 }
             }
+            // FIXME: Commented He Initialization
             if(random_values && has_relu){
                 // He initialization
+                // def_float_t std_dev = sqrt(2.0/1); 
                 def_float_t std_dev = sqrt(2.0/this->weight_inp); 
                 // Fill weights with random values based on the seed and normal distribution
                 for (int i = 0; i < weight_inp * weight_out; i++){
@@ -298,7 +303,15 @@ public:
     }
 
     void apply_activation_fn(std::vector<def_float_t>& input_vector, def_uint_t batch_size){
-        if(this->activationFn == ReLU){
+        if(this->activationFn == LReLU){
+            for(int i = 0; i < input_vector.size(); i++){
+                // std::transform(input_vector.begin(), input_vector.end(), input_vector.begin(), [](def_float_t x) { return x < 0 ? x * leaky_relu_slope : x; });
+                if(input_vector[i] < 0){
+                    input_vector[i] *= leaky_relu_slope;
+                }
+            }
+
+        }else if(this->activationFn == ReLU){
             // cblas_d
             #if USE_OPEN_BLAS
             // TODO: Use SIMD here instead
@@ -360,6 +373,14 @@ public:
         #else
             if(this->activationFn == Linear){
                 // do nothing
+            }else if(this->activationFn == LReLU){
+                for(int i = 0; i < input_vector.size(); i++){
+                    if(input_vector[i] < 0){
+                        input_vector[i] = leaky_relu_slope;
+                    }else{
+                        input_vector[i] = 1;
+                    }
+                }
             }else if(this->activationFn == ReLU){
                 for(int i = 0; i < input_vector.size(); i++){
                     if(input_vector[i] < 0){
@@ -542,12 +563,14 @@ public:
                 #else
 
                     // printing this->weights
+                    if(TELEMETRY == 2) {
                     std::cout << "&this(id)= " << id << "  \t" << this << std::endl;
                     std::cout << "this->weight_inp=" << this->weight_inp << "\t this->weight_out=" << this->weight_out << std::endl;
                     std::cout << "this->weights.size=" << this->weights.size() << "\t this->weights flattened values=" << std::endl;
-                    if(TELEMETRY == 2) {for(int i = 0; i < this->weights.size(); i++){ 
-                        std::cout << this->weights[i] << " ";
-                    }std::cout << std::endl;}
+                        for(int i = 0; i < this->weights.size(); i++){ 
+                            std::cout << this->weights[i] << " ";
+                        }std::cout << std::endl;
+                    }
 
                     for (int batch = 0; batch < batch_size; batch++) {
                         for (int out = 0; out < weight_out; out++) {
