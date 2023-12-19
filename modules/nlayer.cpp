@@ -26,7 +26,6 @@
   #define def_uint_t __UINT16_TYPE__
   #define def_int_t __INT16_TYPE__
 #else
-  // float is 8 bytes
   #define def_float_t double
   #define def_uint_small_t __UINT16_TYPE__
   #define def_uint_t __UINT32_TYPE__
