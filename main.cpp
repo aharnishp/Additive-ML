@@ -251,6 +251,34 @@ int main(){
     // training new network with this as it's input
     nnetwork mnc(14, 10, learning_rate);
     // mnc.add_layer_between_output(14,LReLU,learning_rate);
+    mnc.output_layer->weights = {
+        1,0,0,0,0,0,0,0,0,0,
+        0,1,0,0,0,0,0,0,0,0,
+        0,0,1,0,0,0,0,0,0,0,
+        0,0,0,1,0,0,0,0,0,0,
+        0,0,0,0,1,0,0,0,0,0,
+        0,0,0,0,0,1,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,1,0,0,0,0,0,
+        0,0,0,0,0,1,0,0,0,0,
+        0,0,0,0,0,0,1,0,0,0,
+        0,0,0,0,0,0,0,1,0,0,
+        0,0,0,0,0,0,0,0,1,0,
+        0,0,0,0,0,0,0,0,0,1,
+        0,0,0,0,0,0,0,0,0,0
+    };
+    // mnc.output_layer->weights = {
+    //     1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //     0,1,0,0,0,0,0,0,0,0,0,0,0,0,
+    //     0,0,1,0,0,0,0,0,0,0,0,0,0,0,
+    //     0,0,0,1,0,0,0,0,0,0,0,0,0,0,
+    //     0,0,0,0,1,0,0,1,0,0,0,0,0,0,
+    //     0,0,0,0,0,1,0,0,1,0,0,0,0,0,
+    //     0,0,0,0,0,0,0,0,0,1,0,0,0,0,
+    //     0,0,0,0,0,0,0,0,0,0,1,0,0,0,
+    //     0,0,0,0,0,0,0,0,0,0,0,1,0,0,
+    //     0,0,0,0,0,0,0,0,0,0,0,0,1,0
+    // };
     mnc.output_layer->activationFn=Softmax;
 
     std::cout << "### ARCHITECTURE ###" << std::endl;
@@ -258,7 +286,9 @@ int main(){
     std::cout << "" << std::endl;
 
     // training mnc with input from mna and mnb
-    fori(epochs,epochs_count){
+    // FIXME: remove 0* to enable training
+    std::cout << "Not training the combined model" << std::endl;
+    fori(epochs,epochs_count * 0){
         // read the input values from file
         std::ifstream input_file("dataset/mnist-train.csv");
         std::string line;
