@@ -17,16 +17,16 @@
 #define test_batch_size_def 1
 
 // FIXME: this is for testing only
-#define train_lines_limit 40000
+#define train_lines_limit 11000
 
-#define epochs_count 3
+#define epochs_count 1
 #define TELEMETRY_PROGRESS 1
 #define TELEMETRY_TRAIN_DETAILS 0
 
 
 
 
-#define learning_rate 0.015625/2
+#define learning_rate 0.015625
 #define mnist_a_b_hidden_size 64
 
 void print1D(std::vector<def_float_t> vec){
