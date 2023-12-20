@@ -190,7 +190,10 @@ class nnetwork{
         }
         
         // print error_in_prediction
-        print1D(error_in_prediction);
+        // if(TELEMETRY == 2){
+            std::cout << "prediction error: ";
+            print1D(error_in_prediction);
+        // }
 
         if(this->output_layer != NULL){
             std::vector<def_float_t> error_in_input = this->output_layer->get_correct_error_rec(run_id, batch_size, error_in_prediction, this->default_learning_rate);

@@ -16,6 +16,18 @@
 #define train_batch_size_def 1
 #define test_batch_size_def 1
 
+// FIXME: this is for testing only
+#define train_lines_limit 40000
+
+#define epochs_count 3
+#define TELEMETRY_PROGRESS 1
+#define TELEMETRY_TRAIN_DETAILS 0
+
+
+
+
+#define learning_rate 0.015625/2
+#define mnist_a_b_hidden_size 64
 
 void print1D(std::vector<def_float_t> vec){
     fori(i, vec.size()){
@@ -53,25 +65,36 @@ void print_architecture(nnetwork nn){
 /**
  * @brief onehot encode the given number in class if fitting in range.
 */
-std::vector<def_float_t> onehot_encode(def_int_t num, def_int_t min, def_int_t max){
-    std::vector<def_float_t> oneh(max-min+1, 0);
+std::vector<def_float_t> onehot_encode_unknown(def_int_t num, def_int_t min, def_int_t max){
+    std::vector<def_float_t> oneh(max-min+1+1, 0);
     if(num < min || num > max){
-        std::cout << "error: num is not in range" << std::endl;
+        oneh[oneh.size()-1] = 1;    // last element is for the unknown class
         return oneh;
     }
     oneh[num-min] = 1;
     return oneh;
 }
 
-std::vector<def_float_t> parse_mnist_data_normalized(std::string line){
-    std::vector<def_float_t> input_values;
-    std::stringstream ss(line);
-    std::string token;
-    while(std::getline(ss, token, ',')){
-        input_values.pb(std::stof(token)/255.0);
+std::vector<def_float_t> onehot_encode_ignorant(def_int_t num, def_int_t min, def_int_t max){
+    std::vector<def_float_t> oneh(max-min+1, 0);
+    if(num < min || num > max){
+        return oneh;
     }
-    return input_values;
+    oneh[num-min] = 1;
+    return oneh;
 }
+
+// std::vector<def_float_t> parse_mnist_data_normalized(std::string line){
+//     std::vector<def_float_t> input_values;
+//     std::stringstream ss(line);
+//     std::string token;
+//     while(std::getline(ss, token, ',')){
+//         input_values.pb(std::stof(token)/255.0);
+//     }
+//     return input_values;
+// }
+
+
 
 /**
  * @brief get the index of the max value out of the input vector
@@ -88,8 +111,348 @@ def_int_t get_max_class(std::vector<def_float_t> vec){
     return max_index;
 }
 
-int main(){
 
+int main(){
+    nnetwork mna(784,7,learning_rate);
+    mna.add_layer_between_output(mnist_a_b_hidden_size,LReLU,learning_rate);
+
+    nnetwork mnb(784,7,learning_rate);
+    mnb.add_layer_between_output(mnist_a_b_hidden_size,LReLU,learning_rate);
+
+    std::cout << "### ARCHITECTURE ###" << std::endl;
+    print_architecture(mna);
+    std::cout << "" << std::endl;
+
+    // training the minst a and b in given epochs
+    fori(epochs,epochs_count){
+        // read the input values from file
+        std::ifstream input_file("dataset/mnist-train.csv");
+        std::string line;
+        std::vector<std::string> input_lines;
+        
+        //check if the file opened
+        if(!input_file.is_open()){
+            std::cout << "error: couldn't open the input_file." << std::endl;
+            return -1;
+        }
+
+        // declare train_batch_size
+        def_uint_t train_batch_size = train_batch_size_def;
+        def_uint_t train_line_count = 0;
+
+        std::vector<def_float_t> training_batch;
+        std::vector<def_float_t> labelsA;
+        std::vector<def_float_t> labelsB;
+
+        // read headers once
+        std::getline(input_file, line);
+
+        // reserve the memory for the training batch
+        training_batch.reserve(784);
+
+        int train_iter = 0;
+
+        while(std::getline(input_file, line)){
+            std::stringstream ss(line);
+            std::string token;
+
+            // first element is the label
+            std::getline(ss, token, ',');
+            // onehot encode the labels
+            std::vector<def_float_t> onehA = onehot_encode_unknown(stoi(token), 0, 5);
+            std::vector<def_float_t> onehB = onehot_encode_unknown(stoi(token), 4, 9);
+
+            // insert the onehot vector to labels
+            labelsA.insert(labelsA.end(), onehA.begin(),onehA.end());
+            labelsB.insert(labelsB.end(), onehB.begin(),onehB.end());
+
+            // rest of the elements are the input values
+            // std::vector<def_float_t> input_values = parse_mnist_data_normalized(line);
+            std::vector<def_float_t> input_values;
+            while(std::getline(ss, token, ',')){
+                input_values.pb(std::stof(token)/255.0);
+            }
+
+            training_batch.insert(training_batch.end(), input_values.begin(), input_values.end());
+            
+            train_iter++;
+            if(TELEMETRY_PROGRESS){
+                std::cout << "train_iter=" << train_iter << std::endl;
+            }
+
+            if(train_iter > train_lines_limit){
+                break;
+            }
+
+
+            train_line_count++;
+
+            if(train_line_count == train_batch_size){
+                if(TELEMETRY_TRAIN_DETAILS){
+                    std::cout << "training_batch.size() = " << training_batch.size() << std::endl;
+                }
+                // train the networks
+                mna.backward_prop(training_batch, labelsA, train_line_count);
+                mnb.backward_prop(training_batch, labelsB, train_line_count);
+
+                // reset the training batchs
+                training_batch.clear(); labelsA.clear(); labelsB.clear();
+
+                train_line_count = 0;
+            }
+        }
+
+        input_file.close();
+    }
+
+
+    // // testing the mnist a and b
+    // std::string line;
+    // std::ifstream test_file("dataset/mnist-test.csv");
+    // std::vector<def_float_t> test_batch;
+    // std::vector<def_float_t> test_labels;
+    // std::getline(test_file, line);
+    // test_batch.reserve(784);
+    // def_uint_t test_batch_size = test_batch_size_def; // train_test_batch_size
+    // def_uint_t test_line_count = 0;
+    // def_int_t train_iter = 0;
+    //
+    // def_int_t total_correct = 0;
+    //
+    // while(std::getline(test_file, line)){
+    //     // parse the line
+    //     std::stringstream ss(line);
+    //     std::string token;
+    //
+    //     // first element is the label
+    //     std::getline(ss, token, ',');
+    //     // onehot encode the labels
+    //     std::vector<def_float_t> onehA = onehot_encode_unknown(stoi(token), 0, 5);
+    //     std::vector<def_float_t> onehB = onehot_encode_unknown(stoi(token), 4, 9);
+    //
+    //     // insert the onehot vector to labels
+    //     test_labels.insert(test_labels.end(), onehA.begin(),onehA.end());
+    //     test_labels.insert(test_labels.end(), onehB.begin(),onehB.end());
+    //
+    //     // rest of the elements are the input values
+    //     // std::vector<def_float_t> input_values = parse_mnist_data_normalized(line);
+    //     std::vector<def_float_t> input_values;
+    //     while(std::getline(ss, token, ',')){
+    //         input_values.pb(std::stof(token)/255.0);
+    //     }
+    //
+    //     test_batch.insert(test_batch.end(), input_values.begin(), input_values.end());
+    //
+    //     train_iter++;
+    //     if(TELEMETRY_TRAIN_PROGRESS){
+    //         std::cout << "train_iter=" << train_iter << std::endl;
+    //     }
+    
+    // training new network with this as it's input
+    nnetwork mnc(14, 10, learning_rate);
+    // mnc.add_layer_between_output(14,LReLU,learning_rate);
+    mnc.output_layer->activationFn=Softmax;
+
+    std::cout << "### ARCHITECTURE ###" << std::endl;
+    print_architecture(mnc);
+    std::cout << "" << std::endl;
+
+    // training mnc with input from mna and mnb
+    fori(epochs,epochs_count){
+        // read the input values from file
+        std::ifstream input_file("dataset/mnist-train.csv");
+        std::string line;
+        std::vector<std::string> input_lines;
+        
+        //check if the file opened
+        if(!input_file.is_open()){
+            std::cout << "error: couldn't open the input_file." << std::endl;
+            return -1;
+        }
+
+        // declare train_batch_size
+        def_uint_t train_batch_size = train_batch_size_def;
+        def_uint_t train_line_count = 0;
+
+        std::vector<def_float_t> input_to_AB;
+        std::vector<def_float_t> labelsA;
+        std::vector<def_float_t> labelsB;
+        std::vector<def_float_t> labelsC;
+
+        std::vector<def_float_t> intermediate_batch;
+
+        // read headers once
+        std::getline(input_file, line);
+
+        // reserve the memory for the training batch
+        input_to_AB.reserve(784);
+        intermediate_batch.reserve(12);
+
+        int train_iter = 0;
+
+        while(std::getline(input_file, line)){
+            std::stringstream ss(line);
+            std::string token;
+
+            // first element is the label
+            std::getline(ss, token, ',');
+            // onehot encode the labels
+            std::vector<def_float_t> onehA = onehot_encode_unknown(stoi(token), 0, 5);
+            std::vector<def_float_t> onehB = onehot_encode_unknown(stoi(token), 4, 9);
+            std::vector<def_float_t> onehC = onehot_encode_ignorant(stoi(token), 0, 9);
+
+
+            // insert the onehot vector to labels
+            labelsA.insert(labelsA.end(), onehA.begin(),onehA.end());
+            labelsB.insert(labelsB.end(), onehB.begin(),onehB.end());
+            labelsC.insert(labelsC.end(), onehC.begin(),onehC.end());
+
+            // rest of the elements are the input values
+            // std::vector<def_float_t> input_values = parse_mnist_data_normalized(line);
+            std::vector<def_float_t> input_values;
+            while(std::getline(ss, token, ',')){
+                input_values.pb(std::stof(token)/255.0);
+            }
+
+            input_to_AB.insert(input_to_AB.end(), input_values.begin(), input_values.end());
+            
+            // this is slower, but is required to interleave the results for batch_size > 1
+            std::vector<def_float_t> input_from_A = mna.forward_prop(input_to_AB, 1);
+            std::vector<def_float_t> input_from_B = mnb.forward_prop(input_to_AB, 1);
+
+            input_to_AB.clear();
+            labelsA.clear();
+            labelsB.clear();
+
+
+            intermediate_batch.insert(intermediate_batch.end(), input_from_A.begin(), input_from_A.end());
+            intermediate_batch.insert(intermediate_batch.end(), input_from_B.begin(), input_from_B.end());
+            
+            train_iter++;
+            if(TELEMETRY_PROGRESS){
+                std::cout << "train_iter=" << train_iter << std::endl;
+            }
+
+            if(train_iter > train_lines_limit){
+                break;
+            }
+
+            train_line_count++;
+
+            if(train_line_count == train_batch_size){
+                if(TELEMETRY_TRAIN_DETAILS){
+                    std::cout << "intermediate_batch.size() = " << intermediate_batch.size() << std::endl;
+                }
+                // train the networks
+                mnc.backward_prop(intermediate_batch, labelsC, train_line_count);
+
+                // reset the training batchs
+                input_to_AB.clear(); labelsA.clear(); labelsB.clear(); labelsC.clear(); intermediate_batch.clear();
+
+                train_line_count = 0;
+            }
+            
+        }
+
+        input_file.close();
+    }
+
+
+
+    // test the combined networks
+
+    std::string line;
+    std::ifstream test_file("dataset/mnist-test.csv");
+    std::vector<def_float_t> test_batch;
+    std::vector<def_float_t> test_labels;
+    std::getline(test_file, line);
+    test_batch.reserve(784);
+    def_uint_t test_batch_size = test_batch_size_def; // train_test_batch_size
+    def_uint_t test_line_count = 0;
+    def_int_t test_iter = 0;
+
+    def_int_t total_correct = 0;
+
+    while(std::getline(test_file, line)){
+        // parse the line
+        std::stringstream ss(line);
+        std::string token;
+
+        // first element is the label
+        std::getline(ss, token, ',');
+        // onehot encode the labels
+        // std::vector<def_float_t> onehA = onehot_encode_unknown(stoi(token), 0, 5);
+        // std::vector<def_float_t> onehB = onehot_encode_unknown(stoi(token), 4, 9);
+        std::vector<def_float_t> onehC = onehot_encode_ignorant(stoi(token), 0, 9);
+
+        // insert the onehot vector to labels
+        test_labels.insert(test_labels.end(), onehC.begin(),onehC.end());
+
+        // rest of the elements are the input values
+        // std::vector<def_float_t> input_values = parse_mnist_data_normalized(line);
+        std::vector<def_float_t> input_AB;
+        while(std::getline(ss, token, ',')){
+            input_AB.pb(std::stof(token)/255.0);
+        }
+        
+        std::vector<def_float_t> input_from_A = mna.forward_prop(input_AB, 1);
+        std::vector<def_float_t> input_from_B = mnb.forward_prop(input_AB, 1);
+
+        input_AB.clear();
+
+        test_batch.insert(test_batch.end(), input_from_A.begin(), input_from_A.end());
+        test_batch.insert(test_batch.end(), input_from_B.begin(), input_from_B.end());
+
+        test_iter++;
+        
+        if(TELEMETRY_PROGRESS){
+            std::cout << "test_iter=" << test_iter << std::endl;
+        }
+
+        test_line_count++;
+        
+        if(test_line_count == test_batch_size){
+            if(TELEMETRY_TRAIN_DETAILS){
+                std::cout << "test_batch.size() = " << test_batch.size() << std::endl;
+            }
+            // train the networks
+            std::vector<def_float_t> predictions = mnc.forward_prop(test_batch, test_batch_size);
+            // reset the training batchs
+            test_batch.clear(); 
+            
+            // compare the results
+                def_uint_t correct_count = 0;
+                fori(i, test_batch_size){
+                    def_int_t batch_start = i*10;
+                    def_int_t batch_end = batch_start + 10;
+                    def_int_t max_index = 0;
+                    def_float_t max_value = predictions[batch_start];
+                    for(int j = batch_start+1; j < batch_end; j++){
+                        if(predictions[j] > max_value){
+                            max_value = predictions[j];
+                            max_index = j;
+                        }
+                    }
+                    std::cout << "pred=" << max_index << " \t corr=" << test_labels[max_index] << std::endl;
+                    if(test_labels[max_index] == 1){
+                        correct_count++;
+                    }
+                }
+                total_correct += correct_count;
+            
+            test_labels.clear();
+
+            test_line_count = 0;
+        }
+        
+    }
+    std::cout << "Total Combined Accuracy = " << (total_correct*100.0)/test_iter << std::endl;
+
+    return 0;
+}
+
+
+int main1(){
     nnetwork mnist1(784, 10, 0.015625);
     mnist1.output_layer->activationFn=Softmax;
     mnist1.add_layer_between_output(64,LReLU,0.015625);
@@ -180,9 +543,6 @@ int main(){
                 train_line_count++;
 
                 if(train_line_count == train_batch_size){
-                    if(train_iter > 700){
-                        std::cout << "REACHED" << std::endl;
-                    }
                     cout << "training_batch.size() = " << training_batch.size() << endl;
                     // train the network
                     mnist1.backward_prop(training_batch, labels, train_line_count);
