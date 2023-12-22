@@ -13,11 +13,11 @@
 #define pb push_back
 
 
-#define train_batch_size_def 1
-#define test_batch_size_def 1
+#define train_batch_size_def 8
+#define test_batch_size_def 8
 
 // FIXME: this is for testing only
-#define train_lines_limit 11000
+#define train_lines_limit 42000 // 11000
 
 #define epochs_count 1
 #define TELEMETRY_PROGRESS 1
@@ -267,6 +267,9 @@ int main(){
         0,0,0,0,0,0,0,0,0,1,
         0,0,0,0,0,0,0,0,0,0
     };
+    fori(i,mnc.output_layer->weights.size()){
+        mnc.output_layer->weights[i] += 0.05;
+    }
     // mnc.output_layer->weights = {
     //     1,0,0,0,0,0,0,0,0,0,0,0,0,0,
     //     0,1,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -288,7 +291,7 @@ int main(){
     // training mnc with input from mna and mnb
     // FIXME: remove 0* to enable training
     std::cout << "Not training the combined model" << std::endl;
-    fori(epochs,epochs_count * 0){
+    fori(epochs,epochs_count){
         // read the input values from file
         std::ifstream input_file("dataset/mnist-train.csv");
         std::string line;
@@ -478,6 +481,14 @@ int main(){
     }
     std::cout << "Total Combined Accuracy = " << (total_correct*100.0)/test_iter << std::endl;
 
+    std::cout << "mnc output weights:" << std::endl;
+    print1D(mnc.output_layer->weights);
+    // print2D
+    fori(i, mnc.output_layer->weights.size()/10){
+        fori(j, 10){
+            std::cout << mnc.output_layer->weights[i*10+j] << " ";
+        }std::cout << std::endl;
+    }
     return 0;
 }
 

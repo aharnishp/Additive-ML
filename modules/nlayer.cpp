@@ -53,7 +53,7 @@ typedef enum {
 
 
 // Settings
-#define TELEMETRY 1     // 0 is no string, 1 is only errors, 2 is full telemetry
+#define TELEMETRY 0     // 0 is no string, 1 is only errors, 2 is full telemetry
 #define DEFAULT_LAYER_VERSION 1
 #define INITIAL_LEARNING_RATE 0.05
 
