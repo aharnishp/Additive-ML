@@ -3,13 +3,13 @@
 #include <vector>
 #include <cmath>
 #include <cstring>
-// #if defined(__x86_64__) || defined(__aarch64__)
-//     #define USE_OPEN_BLAS 1    // previously = 1
-//     #include<cblas.h>
-// #else
-//     #define USE_OPEN_BLAS 0
-// #endif
+#if defined(__x86_64__) || defined(__aarch64__)
+    #define USE_OPEN_BLAS 1    // previously = 1
+    #include<cblas.h>
+#else
     #define USE_OPEN_BLAS 0
+#endif
+#define USE_OPEN_BLAS 0
 
 
 // #define fori(i,n) for(int i = 0; i < n; i++)
@@ -49,11 +49,11 @@ typedef enum {
     LReLU = 5
 } activation_fn_t;
 
-#define leaky_relu_slope 0.01
+#define leaky_relu_slope 0.05
 
 
 // Settings
-#define TELEMETRY 1     // 0 is no string, 1 is only errors, 2 is full telemetry
+#define TELEMETRY 0     // 0 is no string, 1 is only errors, 2 is full telemetry
 #define DEFAULT_LAYER_VERSION 1
 #define INITIAL_LEARNING_RATE 0.05
 
@@ -711,7 +711,7 @@ public:
                             sum += activation_error[(batch_num*this->weight_out) + row] * last_inputs[(batch_num*this->weight_inp) + col];
                         }
 
-                        delta_weight.push_back(sum);
+                        delta_weight.push_back(sum * reci_batch_size);
                     }
                 }
 
@@ -751,7 +751,7 @@ public:
                 // update weights
                 for(int i = 0; i < weight_out; i++){
                     for(int j = 0; j < weight_inp; j++){
-                        this->weights[ i * weight_inp + j ] -= (delta_weight[ i * weight_inp + j ]* learning_rate);
+                        this->weights[ i * weight_inp + j ] -= (delta_weight[ i * weight_inp + j ] * learning_rate);
                     }
                 }
 

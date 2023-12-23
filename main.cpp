@@ -12,8 +12,10 @@
 #define fori(i,n) for(int i = 0; i < n; i++)
 #define pb push_back
 
+#define train_data_sample_limit 50000
+#define learning_rate_def 0.015625/2
 
-#define train_batch_size_def 1
+#define train_batch_size_def 4
 #define test_batch_size_def 1
 
 
@@ -90,9 +92,10 @@ def_int_t get_max_class(std::vector<def_float_t> vec){
 
 int main(){
 
-    nnetwork mnist1(784, 10, 0.015625);
+    nnetwork mnist1(784, 10, learning_rate_def);
     mnist1.output_layer->activationFn=Softmax;
-    mnist1.add_layer_between_output(64,LReLU,0.015625);
+    mnist1.add_layer_between_output(64,LReLU,learning_rate_def);
+    // mnist1.add_layer_between_output(64,LReLU,learning_rate_def);
     // mnist1.add_layer_between_output(32,LReLU,0.015625*2);
     // mnist1.add_layer_between_output(16,LReLU,0.015625*2);
 
@@ -111,7 +114,7 @@ int main(){
     if(1){
         std::vector<def_float_t> input_values(784, 0.1);
 
-        fori(epoch, 1){
+        fori(epoch, 10){
             // read the input values from file
             std::ifstream input_file("dataset/mnist-train.csv");
             std::string line;
@@ -180,10 +183,11 @@ int main(){
                 train_line_count++;
 
                 if(train_line_count == train_batch_size){
-                    if(train_iter > 700){
+                    if(train_iter > train_data_sample_limit){
+                        break;
                         std::cout << "REACHED" << std::endl;
                     }
-                    cout << "training_batch.size() = " << training_batch.size() << endl;
+                    // cout << "training_batch.size() = " << training_batch.size() << endl;
                     // train the network
                     mnist1.backward_prop(training_batch, labels, train_line_count);
                     // reset the training batch
