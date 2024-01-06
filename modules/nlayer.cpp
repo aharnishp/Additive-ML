@@ -492,6 +492,8 @@ public:
             }else if(rows_add < 0){
                 print_err("Error: Cannot shrink weight rows of matrix. Use shrink matrix instead.");
             }
+            this->weight_inp = new_weight_inp;
+            this->weight_out = new_weight_out;
             return 0;
         }else{
             return 1;

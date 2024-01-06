@@ -12,10 +12,12 @@
 #define fori(i,n) for(int i = 0; i < n; i++)
 #define pb push_back
 
-#define train_data_sample_limit 50000
-#define learning_rate_def 0.015625/2
+#define train_data_sample_limit 42000
+#define learning_rate_def 0.015625/4
 
-#define train_batch_size_def 4
+#define epoch_count 1
+
+#define train_batch_size_def 1
 #define test_batch_size_def 1
 
 
@@ -95,9 +97,22 @@ int main(){
     nnetwork mnist1(784, 10, learning_rate_def);
     mnist1.output_layer->activationFn=Softmax;
     mnist1.add_layer_between_output(64,LReLU,learning_rate_def);
-    // mnist1.add_layer_between_output(64,LReLU,learning_rate_def);
-    // mnist1.add_layer_between_output(32,LReLU,0.015625*2);
-    // mnist1.add_layer_between_output(16,LReLU,0.015625*2);
+    // mnist1.add_layer_between_output(10,LReLU,learning_rate_def);
+    // // mnist1.add_layer_between_output(32,LReLU,0.015625*2);
+    // // mnist1.add_layer_between_output(16,LReLU,0.015625*2);
+    // // mnist1.output_layer->input_layers.push_back(mnist1.input_layer);
+    // // mnist1.output_layer->input_layers[0]->input_layers.push_back(mnist1.input_layer);
+    
+    // mnist1.output_layer->input_layers.push_back(mnist1.output_layer->input_layers[0]->input_layers[0]);
+    // mnist1.output_layer->auto_grow_weight();
+
+    // mnist1.output_layer->input_layers.push_back(mnist1.input_layer);
+    // mnist1.output_layer->auto_grow_weight();
+    
+    // // mnist1.output_layer->input_layers[0]->auto_grow_weight();
+    // // mnist1.output_layer->input_layers[0]->input_layers[0]->auto_grow_weight();
+
+    
 
     // mnist1.add_layer_between_output(16,ReLU,0.015625/2);
 
@@ -114,7 +129,7 @@ int main(){
     if(1){
         std::vector<def_float_t> input_values(784, 0.1);
 
-        fori(epoch, 10){
+        fori(epoch, epoch_count){
             // read the input values from file
             std::ifstream input_file("dataset/mnist-train.csv");
             std::string line;
