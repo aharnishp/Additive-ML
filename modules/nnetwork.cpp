@@ -190,7 +190,8 @@ class nnetwork{
         }
         
         // print error_in_prediction
-        if(TELEMETRY == 1){
+        if(TELEMETRY == 2){
+            std::cout << "prediction error: ";
             print1D(error_in_prediction);
         }
 
