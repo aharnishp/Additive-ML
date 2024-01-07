@@ -125,8 +125,17 @@ int main(){
     std::cout << "hidden->x = " << mnist1.output_layer->input_layers[0]->x << std::endl;
     std::cout << "input_layer->x = " << mnist1.input_layer->x << std::endl;
 
+    mnist1.output_layer->init_weight(1);
 
-    if(1){
+    std::cout << "mnist output export: " << std::endl;
+    std::vector<char> mnist_output = mnist1.get_nlayer_string(mnist1.output_layer);
+
+    fori(i, mnist_output.size()){
+        std::cout << "(" << (char)mnist_output[i] << ")" << (int)mnist_output[i] << " ";
+    }
+
+
+    if(0){
         std::vector<def_float_t> input_values(784, 0.1);
 
         fori(epoch, epoch_count){

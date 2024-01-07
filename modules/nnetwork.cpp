@@ -22,6 +22,115 @@ class nnetwork{
         }std::cout << std::endl;
     }
 
+
+    // void append_float_to_char_vector(def_float_t val, vector<char> &output){
+    //     // append float to char vector
+
+    //     // using reinterpret_cast
+    //     output.insert(output.end(), reinterpret_cast<char*>(&val), reinterpret_cast<char*>(&val) + sizeof(def_float_t));
+    //     // int size_of_def_float_t = sizeof(def_float_t);
+
+    //     // // using memcpy
+    //     // char *val_char = new char[size_of_def_float_t];
+    //     // memcpy(val_char, &val, size_of_def_float_t);
+    //     // for(int i = 0; i < size_of_def_float_t; i++){
+    //     //     output.push_back(val_char[i]);
+    //     // }
+    // }
+
+    public:
+
+    /**
+     * @brief returns a char array including all properties of the nlayer (including weights)
+     * @param inp_layer pointer to the nlayer
+    */
+    vector<char> get_nlayer_string(nlayer * inp_layer){
+        // generate a string including all properties of the nlayer
+
+        int size_of_def_uint_t = sizeof(def_uint_t);
+        int size_of_def_float_t = sizeof(def_float_t);
+
+        vector<char> output;
+        
+        // id
+        output.push_back(inp_layer->id);
+        output.push_back(',');
+        
+        // layer type
+        output.push_back(inp_layer->layer_type);
+        output.push_back(',');
+
+        if(inp_layer->layer_type == 0){
+            // input layer
+            output.push_back(inp_layer->x);
+                output.push_back(',');
+            output.push_back(inp_layer->y);
+                output.push_back(',');
+            output.push_back(inp_layer->z);
+                output.push_back(',');
+        }
+
+        // number of input layers
+        def_uint_t num_inp_layers = inp_layer->input_layers.size();
+        output.insert(output.end(), reinterpret_cast<char*>(&num_inp_layers), reinterpret_cast<char*>(&num_inp_layers) + size_of_def_uint_t);
+        output.push_back(',');
+
+        output.push_back('{'); // input_layers
+            for(int i = 0; i < inp_layer->input_layers.size(); i++){
+                // store as little endian into size of def_uint_t
+                for(int j = 0; j < size_of_def_uint_t; j++){
+                    output.push_back((inp_layer->input_layers[i]->id >> (j*8)) & 0xFF);
+                }
+
+                if(i != inp_layer->input_layers.size()-1)
+                    output.push_back(',');
+            }
+
+        output.push_back('}');
+        output.push_back(',');
+
+        // store activation function
+        output.push_back(inp_layer->activationFn);
+
+        output.push_back(',');
+
+        def_float_t this_learning_rate = inp_layer->learning_rate;
+
+        // append learning rate as float
+        output.insert(output.end(), reinterpret_cast<char*>(&this_learning_rate), reinterpret_cast<char*>(&this_learning_rate) + size_of_def_float_t);
+        // for(int i = 0; i < size_of_def_float_t; i++){
+        //     // store as little endian
+        //     // copy each byte in host order
+        //     output.insert(output.end(), reinterpret_cast<char*>(&this_learning_rate) + i, reinterpret_cast<char*>(&this_learning_rate) + i + 1);
+        // }
+        output.push_back(',');
+
+        // store weight_inp
+        output.insert(output.end(), reinterpret_cast<char*>(&inp_layer->weight_inp), reinterpret_cast<char*>(&inp_layer->weight_inp) + size_of_def_uint_t);
+        output.push_back(',');
+
+        // store weight_out
+        output.insert(output.end(), reinterpret_cast<char*>(&inp_layer->weight_out), reinterpret_cast<char*>(&inp_layer->weight_out) + size_of_def_uint_t);
+        output.push_back(',');
+
+        // store weights
+        output.push_back('{');  // not including seperating commas, as faster for batch copy
+            // for(int i = 0; i < inp_layer->weights.size(); i++){
+            //     output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights[i].data()), reinterpret_cast<char*>(inp_layer->weights[i].data() + inp_layer->weights[i].size()*size_of_def_float_t));
+            // }
+            
+            // use batch copy to quickly copy all weights
+            output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights.data()), reinterpret_cast<char*>(inp_layer->weights.data() + inp_layer->weights.size()*sizeof(def_float_t)));
+        output.push_back('}');
+
+        return output;
+        
+
+
+
+
+    }
+
     public:
     nlayer *input_layer;
     nlayer *output_layer;

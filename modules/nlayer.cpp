@@ -4,19 +4,19 @@
 #include <cmath>
 #include <cstring>
 #if defined(__x86_64__) || defined(__aarch64__)
-    #define USE_OPEN_BLAS 1    // previously = 1
+    #define USE_SIMD 1    // previously = 1
     #include<cblas.h>
 #else
-    #define USE_OPEN_BLAS 0
+    #define USE_SIMD 0
 #endif
-#define USE_OPEN_BLAS 0
+#define USE_SIMD 0
 
 
 // #define fori(i,n) for(int i = 0; i < n; i++)
 // #define pb push_back
 
 //// Compile Time Parameters 
-// #define Low_Memory_Target 0
+#define Low_Memory_Target 1
 
 
 // Compile Parameter Code
@@ -312,7 +312,7 @@ public:
 
         }else if(this->activationFn == ReLU){
             // cblas_d
-            #if USE_OPEN_BLAS
+            #if USE_SIMD
             // TODO: Use SIMD here instead
                 for(int i = 0; i < input_vector.size(); i++){
                     if(input_vector[i] < 0){
@@ -367,7 +367,7 @@ public:
 
     void multiply_activation_derivative_fn(std::vector<def_float_t>& input_vector){
         
-        #if USE_OPEN_BLAS
+        #if USE_SIMD
             // TODO: Use SIMD here instead
         #else
             if(this->activationFn == Linear){
@@ -559,8 +559,9 @@ public:
             if(input_activations.size() == weight_inp*batch_size){
                 // do the matrix multiplication
                     std::vector<def_float_t> output_vector(weight_out*batch_size);
-                #if USE_OPEN_BLAS
+                #if USE_SIMD
                     // TODO:
+
                 #else
 
                     // printing this->weights
@@ -667,7 +668,8 @@ public:
 
             std::vector<def_float_t> error_diff;
             error_diff.reserve(activation_error.size());
-            #if USE_OPEN_BLAS    // TODO: Add SIMD instructions
+            #if USE_SIMD    // TODO: Add SIMD instructions
+            
             #else
                 // getting difference (error) in current activation and expected activation
                 // for(int i = 0; i < activation_error.size(); i++){
