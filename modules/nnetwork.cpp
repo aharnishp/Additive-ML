@@ -357,12 +357,23 @@ class nnetwork{
         }
 
         // recursively visit all layers, and add to to_be_printed, while making sure, there is no matching id, in that case, add to the highest one.
-        set<def_uint_t> visited_ids;
+        std::set<def_uint_t> visited_ids;
         def_uint_t max_id = 0;
 
         std::vector<nlayer*> unvisited;
-        vector<nlayer *> visited;
+        std::vector<nlayer *> visited;
 
+        unvisited.push_back(this->output_layer);
+
+        // open fstream file
+        // store network file to buffer
+        std::vector<char> export_buffer;
+
+        while(unvisited.size()){
+            this_layer = 
+            std::vector<char> this_string = get_nlayer_string();
+            export_buffer.append();
+        }
 
 
 
