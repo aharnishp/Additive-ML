@@ -7,6 +7,10 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <set>
+// #ifdef __unix__
+//     #include <fstream>
+// #endif
 
 // #define def_float_t double
 
@@ -307,7 +311,7 @@ class nnetwork{
         if(this->output_layer != NULL){
             std::vector<def_float_t> error_in_input = this->output_layer->get_correct_error_rec(run_id, batch_size, error_in_prediction, this->default_learning_rate);
         }else{
-            cout << "output_layer pointer is NULL" << endl;
+            std::cout << "output_layer pointer is NULL" << std::endl;
         }
 
         return error_in_prediction;
@@ -347,6 +351,22 @@ class nnetwork{
 
     def_uint_small_t export_nnetwork(string filepath){
         string File_Header;
+
+        if(TELEMETRY){
+            std::cout << "exporting nnetwork to " << filepath << std::endl;
+        }
+
+        // recursively visit all layers, and add to to_be_printed, while making sure, there is no matching id, in that case, add to the highest one.
+        set<def_uint_t> visited_ids;
+        def_uint_t max_id = 0;
+
+        std::vector<nlayer*> unvisited;
+        vector<nlayer *> visited;
+
+
+
+
+
 
         return 0;
     }
