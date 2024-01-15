@@ -9,7 +9,6 @@
 #else
     #define USE_SIMD 0
 #endif
-#define USE_SIMD 0
 
 
 // #define fori(i,n) for(int i = 0; i < n; i++)
@@ -558,40 +557,36 @@ public:
 
             if(input_activations.size() == weight_inp*batch_size){
                 // do the matrix multiplication
-                    std::vector<def_float_t> output_vector(weight_out*batch_size);
-                #if USE_SIMD
-                    // TODO:
+                std::vector<def_float_t> output_vector(weight_out*batch_size);
 
-                #else
-
-                    // printing this->weights
-                    if(TELEMETRY == 2) {
+                // printing this->weights
+                if(TELEMETRY == 2) {
                     std::cout << "&this(id)= " << id << "  \t" << this << std::endl;
                     std::cout << "this->weight_inp=" << this->weight_inp << "\t this->weight_out=" << this->weight_out << std::endl;
                     std::cout << "this->weights.size=" << this->weights.size() << "\t this->weights flattened values=" << std::endl;
                         for(int i = 0; i < this->weights.size(); i++){ 
                             std::cout << this->weights[i] << " ";
                         }std::cout << std::endl;
-                    }
+                }
 
-                    for (int batch = 0; batch < batch_size; batch++) {
-                        for (int out = 0; out < weight_out; out++) {
-                            def_float_t result = 0.0f;
-                            for (int in = 0; in < weight_inp; in++) {
-                                result += input_activations[batch * weight_inp + in] * this->weights[in * weight_out + out];
-                            }
-                            output_vector[batch * weight_out + out] = result;
+                // performing matrix multiplication
+                for (int batch = 0; batch < batch_size; batch++) {
+                    for (int out = 0; out < weight_out; out++) {
+                        def_float_t result = 0.0f;
+                        for (int in = 0; in < weight_inp; in++) {
+                            result += input_activations[batch * weight_inp + in] * this->weights[in * weight_out + out];
                         }
+                        output_vector[batch * weight_out + out] = result;
                     }
+                }
 
-                    // add bias
-                    if(TELEMETRY == 2){ if(bias.size() != weight_out){ std::cout << "this->bias uninitialized. this=" << this << std::endl; } }
-                    for (int i = 0; i < weight_out*batch_size; i++) {
-                        output_vector[i] += this->bias[i%weight_out];   // add bias to all elements in the batch
-                    }
-                    
-
-                #endif
+                if(TELEMETRY == 2){ if(bias.size() != weight_out){ std::cout << "this->bias uninitialized. this=" << this << std::endl; } }
+                
+                // add bias to result
+                for (int i = 0; i < weight_out*batch_size; i++) {
+                    output_vector[i] += this->bias[i%weight_out];   // add bias to all elements in the batch
+                }
+                
 
                 // apply activation function
                 // output_vector = get_activation_Fn_value(output_vector);

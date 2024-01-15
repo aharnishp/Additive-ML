@@ -127,6 +127,9 @@ int main(){
 
     mnist1.output_layer->init_weight(1);
 
+    std::cout << "mnist exporting: " << std::endl;
+    mnist1.export_nnetwork("mnist1.nnw");
+
     // std::cout << "mnist output export: " << std::endl;
     // std::vector<char> mnist_output = mnist1.get_nlayer_string(mnist1.output_layer);
 
@@ -135,7 +138,7 @@ int main(){
     // }
 
 
-    if(1){
+    if(0){
         std::vector<def_float_t> input_values(784, 0.1);
 
         fori(epoch, epoch_count){
