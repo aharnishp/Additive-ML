@@ -4,8 +4,9 @@
 #include <cmath>
 #include <cstring>
 #if defined(__x86_64__) || defined(__aarch64__)
-    #define USE_SIMD 1    // previously = 1
+    #define USE_SIMD 0    // previously = 1
     #include<cblas.h>
+    #include<immintrin.h>
 #else
     #define USE_SIMD 0
 #endif
@@ -126,7 +127,7 @@ public:
     def_uint_t weight_inp = 0;  
     def_uint_t weight_out = 0;
     // NOTE: 2D weights matrix is stored as as 1D flattened vector expected as row major.
-    // vector<def_float_t> weights; // weights[px][py] = weights[px*weight_out + py]
+    // vector<def_float_t> weights; // weights[m][n] = weights[m * weight_inp + n]
     std::vector<def_float_t> weights;
 
     // NOTE: 4D vector of filters is stored as 1D flattened vector expected as row major. Hence all filters must be of same size or need to make new layer for heterogenous sizes.
@@ -499,6 +500,60 @@ public:
         }
     }
 
+    #if USE_SIMD 
+    /**
+     * @brief Multiply matrices in place, using AVX
+     * @param A The first matrix
+     * @param B The second matrix
+     * @param output_vector The output vector
+     * @param weight_inp The number of columns in A and rows in B
+     * @param weight_out The number of rows in A and columns in B
+     * @param batch_size The number of batches
+    */
+    void matrix_multiply(const def_float_t* A, const def_float_t* B, std::vector<def_float_t> output_vector, def_uint_t weight_inp, def_uint_t weight_out, def_uint_t batch_size){
+        // TODO: make this setting global
+        #define AVX_Size 256
+
+        // check if weights are indeed stored as floats
+        if(sizeof(def_float_t) == sizeof(float)){
+            static def_uint_small_t AVX_num_floats = AVX_Size/sizeof(float);
+
+            // clean the output vector, and initialize of size weight_out*batch_size with 0
+            output_vector.resize(weight_out*batch_size);
+            std::memset(output_vector.data(), 0, sizeof(def_float_t) * weight_out * batch_size);
+
+            // for each batch
+            for(int batch = 0; batch < batch_size; batch++){
+                for(int m = 0; m < weight_out; m++){
+                    __m256 sum = _mm256_setzero_ps();
+                    int n = 0;
+                    for(; n < weight_inp; n += AVX_num_floats){
+                        __m256 a = _mm256_load_ps(A + batch*weight_inp + n);
+                        __m256 b = _mm256_load_ps(B + m*weight_inp + n);
+                        sum = _mm256_fmadd_ps(a, b, sum);
+                    }
+                    // if n is not a multiple of 8, then handle the remaining elements, given n is already greater than weight_inp using scalar operations
+                    if(n < weight_inp){
+                        def_float_t temp_sum[AVX_num_floats];
+                        // initialize with 0
+                        std::memset(temp_sum, 0, sizeof(def_float_t) * AVX_num_floats);
+                        for(int i = 0; i < AVX_num_floats; i++){
+                            if(n + i < weight_inp){
+                                temp_sum[i] = A[batch*weight_inp + n + i] * B[m*weight_inp + n + i];
+                            }
+                        }
+                        sum = _mm256_add_ps(sum, _mm256_load_ps(temp_sum));
+                    }
+
+
+                    output_vector[batch * weight_out + m] = sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7];
+                }
+
+            }
+        }
+    }
+    #endif
+
     std::vector<def_float_t> get_activation_rec(def_int_t run_id, def_uint_t batch_size){
         // this is memory in efficient, but faster to implement.
         if(this->cached_run_id == run_id){  // check whether to return directly from cache if already calculated.
@@ -569,7 +624,20 @@ public:
                         }std::cout << std::endl;
                 }
 
-                // performing matrix multiplication
+                #if USE_SIMD
+                matrix_multiply(this->weights.data(), input_activations.data(), output_vector, weight_inp, weight_out, batch_size);
+                #else
+                // // performing matrix multiplication
+                // for(int batch = 0; batch < batch_size; batch++){
+                //     for(int m = 0; m < weight_out; m++){
+                //         def_float_t result = 0;
+                //         for(int n = 0; n < weight_inp; n++){
+                //             result += input_activations[batch*weight_inp + n] * this->weights[m*weight_inp + n];
+                //         }
+                //         output_vector[batch * weight_out + m] = result;
+                //     }
+                // }
+                #endif
                 for (int batch = 0; batch < batch_size; batch++) {
                     for (int out = 0; out < weight_out; out++) {
                         def_float_t result = 0.0f;
@@ -579,6 +647,7 @@ public:
                         output_vector[batch * weight_out + out] = result;
                     }
                 }
+
 
                 if(TELEMETRY == 2){ if(bias.size() != weight_out){ std::cout << "this->bias uninitialized. this=" << this << std::endl; } }
                 

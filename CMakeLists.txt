@@ -6,6 +6,7 @@ project(MyProject)
 # Add include directories specific to x86_64, ARMv8, or arm64
 include_directories(openblas pthread gfortran)
 
+
 add_executable(main main.cpp)
 
 # find_package(OpenBLAS REQUIRED)
@@ -13,6 +14,7 @@ add_executable(main main.cpp)
 # target_link_directories(main PRIVATE modules/ ${OpenBLAS_INCLUDE_DIRS})
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
     target_include_directories(main PRIVATE /usr/include/openblas)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
