@@ -51,7 +51,7 @@ class nnetwork{
      * @brief returns a char array including all properties of the nlayer (including weights)
      * @param inp_layer pointer to the nlayer
     */
-    vector<char> export_nlayer(nlayer * inp_layer){
+    vector<char> get_nlayer_export(nlayer * inp_layer){
         // generate a string including all properties of the nlayer
 
         int size_of_def_uint_t = sizeof(def_uint_t);
@@ -127,6 +127,7 @@ class nnetwork{
             // }
             
             // use batch copy to quickly copy all weights
+            
             output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights.data()), reinterpret_cast<char*>(inp_layer->weights.data() + inp_layer->weights.size()*sizeof(def_float_t)));
         output.push_back('}');
 
@@ -134,11 +135,11 @@ class nnetwork{
     }
 
     /**
-     * @brief fills in layer details to given input array
+     * @brief fills in layer at the end of given input array
      * @param inp_layer pointer to the nlayer
      * @param output char vector to be filled
     */
-    void export_nlayer(nlayer * inp_layer, std::vector<char> &output){
+    void export_nlayer_to_array(nlayer * inp_layer, std::vector<char> &output){
         // generate a string including all properties of the nlayer
 
         int size_of_def_uint_t = sizeof(def_uint_t);
@@ -223,6 +224,9 @@ class nnetwork{
     public:
     nlayer *input_layer;
     nlayer *output_layer;
+
+    std::vector<nlayer *> input_layers;
+    std::vector<nlayer *> output_layers;
     
     def_uint_t next_assigning_id = 0;
 
@@ -333,13 +337,48 @@ class nnetwork{
         */
         run_id++;
 
-        this->input_layer->cached_activation_values = input_values;
-        this->input_layer->cached_batch_size = batch_size;
+        // check if there is only a single input
+        if(this->input_layers.size() > 1){
+            // distribute inputs to each input layer
+            int input_size = input_values.size() / batch_size;
+            for(int inp_layer_indx = 0; inp_layer_indx < this->input_layers.size(); inp_layer_indx++){
+                std::vector<def_float_t> this_input;
+                for(int i = 0; i < batch_size; i++){
+                    // for(int j = 0; j < input_size; j++){
+                    //     this_input.push_back(input_values[i*input_size + j]);
+                    // }
+                    this_input.insert(this_input.end(), input_values.begin() + i*input_size, input_values.begin() + (i+1)*input_size);
+                }
+                this->input_layers[inp_layer_indx]->cached_activation_values = this_input;
+                this->input_layers[inp_layer_indx]->cached_batch_size = batch_size;
 
-        return (this->output_layer->get_activation_rec(run_id,batch_size));
+            }
+        }else{
+            this->input_layer->cached_activation_values = input_values;
+            this->input_layer->cached_batch_size = batch_size;
+        }
+
+        // check number of output layers in the network
+        if(this->output_layers.size() > 1){
+            // combine outputs from each output layer, after getting activation for current run_id
+            std::vector<def_float_t> output_values;
+            for(int out_layer_indx = 0; out_layer_indx < this->output_layers.size(); out_layer_indx++){
+                std::vector<def_float_t> this_output = this->output_layers[out_layer_indx]->get_activation_rec(run_id,batch_size);
+                output_values.insert(output_values.end(), this_output.begin(), this_output.end());
+            }
+            return output_values;
+        }else if(this->output_layers.size() == 0){
+            return (this->output_layer->get_activation_rec(run_id,batch_size));
+        }
 
         // return this->output_layer->cached_activation_values;        
     }
+
+    /**
+     * @brief given the input_values, returns the predicted value of the network.
+     * @param input_values flattened 1D vector of the 2D array formed by input_layer.size * batch_size
+     * @param batch_size
+    */
 
     /**
      * @brief calculates output layer error and recursively corrects the error in the previous layers till the input layer.
@@ -493,7 +532,7 @@ class nnetwork{
             }
 
             // insert this_layer to export_buffer
-            vector<char> this_export = export_nlayer(this_layer);
+            vector<char> this_export = get_nlayer_export(this_layer);
             export_buffer.insert(export_buffer.end(), this_export.begin(), this_export.end());
         }
 

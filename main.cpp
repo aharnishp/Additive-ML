@@ -145,7 +145,7 @@ int main(){
     // }
 
 
-    if(1){
+    if(0){
         std::vector<def_float_t> input_values(784, 0.1);
 
         fori(epoch, epoch_count){
