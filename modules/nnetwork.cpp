@@ -122,13 +122,14 @@ class nnetwork{
 
         // store weights
         output.push_back('{');  // not including seperating commas, as faster for batch copy
-            // for(int i = 0; i < inp_layer->weights.size(); i++){
-            //     output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights[i].data()), reinterpret_cast<char*>(inp_layer->weights[i].data() + inp_layer->weights[i].size()*size_of_def_float_t));
-            // }
+            for(int i = 0; i < inp_layer->weights.size(); i++){
+                //  FIXME:
+                output.insert(output.end(), size_of_def_float_t, inp_layer->weights[i]);
+            }
             
             // use batch copy to quickly copy all weights
-            
-            output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights.data()), reinterpret_cast<char*>(inp_layer->weights.data() + inp_layer->weights.size()*sizeof(def_float_t)));
+
+            // output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights.data()), reinterpret_cast<char*>(inp_layer->weights.data() + inp_layer->weights.size()*sizeof(def_float_t)));
         output.push_back('}');
 
         return output;
@@ -210,12 +211,14 @@ class nnetwork{
 
         // store weights
         output.push_back('{');  // not including seperating commas, as faster for batch copy
-            // for(int i = 0; i < inp_layer->weights.size(); i++){
+            for(int i = 0; i < inp_layer->weights.size(); i++){
+                // FIXME: check if this actually works
+                output.insert(output.end(), size_of_def_float_t, inp_layer->weights[i]);
             //     output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights[i].data()), reinterpret_cast<char*>(inp_layer->weights[i].data() + inp_layer->weights[i].size()*size_of_def_float_t));
-            // }
+            }
             
             // use batch copy to quickly copy all weights
-            output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights.data()), reinterpret_cast<char*>(inp_layer->weights.data() + inp_layer->weights.size()*sizeof(def_float_t)));
+            // output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights.data()), reinterpret_cast<char*>(inp_layer->weights.data() + inp_layer->weights.size()*sizeof(def_float_t)));
         output.push_back('}');
 
         // return output;
@@ -474,15 +477,103 @@ class nnetwork{
 
     }
 
+    private:
+    void insert_def_float_t(std::vector<char> &input_arr, def_float_t input_val){
+        size_t float_size = sizeof(def_float_t);
+        char* float_bytes = reinterpret_cast<char*>(&input_val);
+        
+        for(size_t i = 0; i < float_size; i++){
+            input_arr.push_back(float_bytes[i]);
+        }
+    }
 
-    def_uint_small_t export_nnetwork(string filepath){
+    void insert_def_int_t(std::vector<char> &input_arr, def_int_t input_val) {
+        size_t int_size = sizeof(def_int_t);
+        char* int_bytes = reinterpret_cast<char*>(&input_val);
+
+        for (size_t i = 0; i < int_size; i++) {
+            input_arr.push_back(int_bytes[i]);
+        }
+    }
+
+    void insert_def_uint_t(std::vector<char> &input_arr, def_uint_t input_val) {
+        size_t uint_size = sizeof(def_uint_t);
+        char* uint_bytes = reinterpret_cast<char*>(&input_val);
+
+        for (size_t i = 0; i < uint_size; i++) {
+            input_arr.push_back(uint_bytes[i]);
+        }
+}
+
+
+    public:
+
+
+    //   ______                       _
+    //  |  ____|                     | |
+    //  | |__  __  ___ __   ___  _ __| |_
+    //  |  __| \ \/ / '_ \ / _ \| '__| __|
+    //  | |____ >  <| |_) | (_) | |  | |_
+    //  |______/_/\_\ .__/ \___/|_|   \__|
+    //              | |
+    //              |_|
+    //   _          ______ _ _
+    //  | |        |  ____(_) |
+    //  | |_ ___   | |__   _| | ___
+    //  | __/ _ \  |  __| | | |/ _ \ 
+    //  | || (_) | | |    | | |  __/
+    //   \__\___/  |_|    |_|_|\___|
+
+    def_uint_small_t export_nnetwork_to_file(string filepath){
         string File_Header;
-
-        // TODO: Add header binaries
 
         if(TELEMETRY){
             std::cout << "exporting nnetwork to " << filepath << std::endl;
         }
+
+        //      _  _ ____ ____ ___  ____ ____
+        //      |__| |___ |__| |  \ |___ |__/
+        //      |  | |___ |  | |__/ |___ |  \ 
+        //      insert header to the export buffer
+        
+        // store network file to buffer
+        std::vector<char> export_buffer = {'a','d','N','N',','};    // init with the file magic number
+        // TODO: Add header binaries
+
+        // export the data version in single byte
+        export_buffer.push_back((char)DEFAULT_LAYER_VERSION);
+
+        // insert the size of def_uint_small_t    
+        export_buffer.push_back((char)sizeof(def_uint_small_t));
+    
+        // insert the size of def_int_t
+        export_buffer.push_back((char)sizeof(def_int_t));
+
+        // insert the size of def_float_t
+        export_buffer.push_back((char)sizeof(def_float_t)); 
+
+        // export byte representing little endian byte ordering
+        #if defined(__x86_64__) || defined(__aarch64__) || defined(__arm__)
+            export_buffer.push_back((char)1);
+        #else
+            print_err("Unable to detect architecture.")
+        #endif
+         
+        // check if the ids of output & input are unique
+        if(this->input_layer->id==this->output_layer->id){
+            this->output_layer->id++;
+        }
+
+        // export the id of output layer
+        insert_def_uint_t(export_buffer, this->output_layer->id);
+        //export the id of input layer
+        insert_def_uint_t(export_buffer, this->input_layer->id);
+
+
+        //    ___ ____ ____ _  _ ____ ____ ____ ____
+        //     |  |__/ |__| |  | |___ |__/ [__  |___
+        //     |  |  \ |  |  \/  |___ |  \ ___] |___
+        //    traverse each layer recursively in BFS to store pointers to all layers in visited array.
 
         // recursively visit all layers, and add to to_be_printed, while making sure, there is no matching id, in that case, add to the highest one.
         // std::set<def_uint_t> visited_ids;
@@ -495,8 +586,6 @@ class nnetwork{
         max_id = output_layer->id;
 
         // open fstream file
-        // store network file to buffer
-        std::vector<char> export_buffer;
 
         while(unvisited.size()){
             nlayer* this_layer = unvisited[unvisited.size()-1]; // get current layer

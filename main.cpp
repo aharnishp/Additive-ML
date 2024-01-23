@@ -132,6 +132,8 @@ int main(){
     std::vector<def_float_t> mat2 = {1,2,3,4,5,6,7,8,9,10,11,12};
     std::vector<def_float_t> output = {};
 
+    mnist1.export_nnetwork_to_file("test.txt");
+
     // mnist1.output_layer->matrix_multiply(mat1.data(), mat2.data(), output, 3, 4, 3);
 
     // std::cout << "mnist exporting: " << std::endl;
