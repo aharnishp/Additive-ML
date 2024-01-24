@@ -103,8 +103,6 @@ def_float_t get_rand_float_seeded(unsigned int seed){ srand(seed); return ( (flo
 // {
 class nlayer{
 
-private:
-public:
 
     // general info
     def_uint_t id = 0;
@@ -126,6 +124,8 @@ public:
     // INFO: the number of rows in the weight matrix corresponds to the number of input units, and the number of columns corresponds to the number of output units.
     def_uint_t weight_inp = 0;  
     def_uint_t weight_out = 0;
+    def_uint_t weight_inp_allocated = 0;
+    def_uint_t weight_out_allocated = 0;
     // NOTE: 2D weights matrix is stored as as 1D flattened vector expected as row major.
     // vector<def_float_t> weights; // weights[m][n] = weights[m * weight_inp + n]
     std::vector<def_float_t> weights;
@@ -230,27 +230,57 @@ public:
         this->is_dynamic_layer = 1;
     }
     
-    def_float_t get_weight_value(def_uint_t px, def_uint_t py){
-        if(layer_type==Fully_Connected_INPUTS){
-            if(px < weight_inp && py < weight_out){
-                return (weights[px*weight_out + py]);
-            }else{
-                return (-1);
-            }
-        }else{
-            return (-1);
-        }
+    /**
+     * @brief returns the index of the weight matrix in the flattened vector.
+     * @param m The row index of the weight matrix.
+     * @param n The column index of the weight matrix.
+    */
+    inline def_uint_t flat_indx(def_uint_t m, def_uint_t n){
+        return ( this->weight_inp_allocated * m + n );    // assuming row major for faster forward prop        
+        // if(this->layer_type==Fully_Connected_INPUTS){
+        //     if(m < weight_inp && n < weight_out){
+        //         return ( weight_inp_allocated * m + n );    // assuming row major for faster forward prop
+        //     }else{
+        //         print_err("Error: weight_indx_flattened() index out of bounds.");
+        //         return (0);
+        //     }
+        // }
+        // return (0);
     }
 
-    def_uint_small_t init_weight(def_uint_small_t random_values) {
+    inline def_uint_t get_default_reserve_size(def_uint_t actual_size){
+        return (actual_size * 1.5);
+        // return (actual_size + 2);
+    }
+
+    // def_float_t get_weight_value(def_uint_t px, def_uint_t py){
+    //     if(layer_type==Fully_Connected_INPUTS){
+    //         if(px < weight_inp && py < weight_out){
+    //             return (weights[px*weight_out + py]);
+    //         }else{
+    //             return (-1);
+    //         }
+    //     }else{
+    //         return (-1);
+    //     }
+    // }
+
+    def_uint_small_t init_weight(def_uint_small_t random_values, def_uint_small_t reserve) {
         if(this->layer_type == Fully_Connected_INPUTS){
             this->weights.clear();
-            this->weights.resize(weight_inp * weight_out);
+            // this->weights.resize(weight_inp * weight_out);
+            if(reserve){
+                this->weight_inp_allocated = get_default_reserve_size(weight_inp);
+                this->weight_out_allocated = (weight_out);
+            }else{
+                this->weight_inp_allocated = weight_inp;
+                this->weight_out_allocated = weight_out;
+            }
+            this->weights.resize(this->weight_inp_allocated * this->weight_out_allocated);
 
             def_int_t rand_seed = get_rand_float()*1000;
 
             if(weight_inp == 0 || weight_out == 0){
-                
                 print_err("Error weight dimensions are unknown.")
                 return 1;
             }
@@ -263,33 +293,47 @@ public:
                     break;
                 }
             }
-            // FIXME: Commented He Initialization
-            if(random_values && has_relu){
-                // He initialization
-                // def_float_t std_dev = sqrt(2.0/1); 
-                def_float_t std_dev = sqrt(2.0/this->weight_inp); 
-                // Fill weights with random values based on the seed and normal distribution
-                for (int i = 0; i < weight_inp * weight_out; i++){
-                    def_float_t u1 = get_rand_float_seeded(rand_seed);
-                    def_float_t u2 = get_rand_float_seeded((rand_seed++) + 1);
-                    weights[i] = sqrt(-2 * log(u1)) * cos(2 * M_PI * u2);
-                    weights[i] *= std_dev;
-                }
-            }else{  // TODO: Improve control flow structure // every other case
-                for(int i = 0; i < weight_inp * weight_out; i++){
-                    if(random_values){
-                        this->weights[i] = get_rand_float_seeded(rand_seed++);
-                    }else{
-                        this->weights[i] = 0;
+            if(random_values){
+                if(has_relu){
+                    // He initialization
+                    // def_float_t std_dev = sqrt(2.0/1); 
+                    def_float_t std_dev = sqrt(2.0/this->weight_inp); 
+                    // Fill weights with random values based on the seed and normal distribution
+                    for (int row = 0; row < weight_inp; row++) {
+                        for (int col = 0; col < weight_out; col++){
+                            def_float_t u1 = get_rand_float_seeded(rand_seed);
+                            def_float_t u2 = get_rand_float_seeded((rand_seed++) + 1);
+                            weights[flat_indx(row, col)] = sqrt(-2 * log(u1)) * cos(2 * M_PI * u2);
+                            weights[flat_indx(row, col)] *= std_dev;
+                        
+                        }
                     }
+                    // for (int i = 0; i < weight_inp * weight_out; i++){
+                    //     def_float_t u1 = get_rand_float_seeded(rand_seed);
+                    //     def_float_t u2 = get_rand_float_seeded((rand_seed++) + 1);
+                    //     weights[i] = sqrt(-2 * log(u1)) * cos(2 * M_PI * u2);
+                    //     weights[i] *= std_dev;
+                    // }
+                }else{
+                    for (int row = 0; row < weight_inp; row++) {
+                        for (int col = 0; col < weight_out; col++){
+                            weights[flat_indx(row, col)] = get_rand_float_seeded(rand_seed++);
+                        
+                        }
+                    }
+                }
+
+            }else{
+                for(int i = 0; i < weight_inp_allocated * weight_out_allocated; i++){
+                    this->weights[i] = 0;
                 }
             }
 
             this->bias.clear();
-            this->bias.reserve(weight_out);
+            this->bias.resize(weight_out);
             for (int i = 0; i < weight_out; i++) {
-                this->bias.push_back(0);
-                // this->bias.push_back(get_rand_float_seeded(rand_seed++));
+                // this->bias.push_back(0);
+                this->bias[i] = get_rand_float_seeded(rand_seed++);
             }
             
         }
