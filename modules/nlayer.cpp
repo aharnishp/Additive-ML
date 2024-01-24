@@ -16,7 +16,7 @@
 // #define pb push_back
 
 //// Compile Time Parameters 
-#define Low_Memory_Target 1
+#define Low_Memory_Target 0
 
 
 // Compile Parameter Code
@@ -153,11 +153,6 @@ public:
 
     // if learning_rate of current layer is 0, than the layer weights will be immutable
     def_float_t learning_rate = INITIAL_LEARNING_RATE;
-
-
-
-    // caching activations after activation Fn.
-    def_uint_small_t cache_init = un_initiated_cache_state;
 
     // stores run_id when it this layer's last activation was calculated
     def_int_t cached_run_id = 0;
@@ -556,7 +551,7 @@ public:
 
     std::vector<def_float_t> get_activation_rec(def_int_t run_id, def_uint_t batch_size){
         // this is memory in efficient, but faster to implement.
-        if(this->cached_run_id == run_id){  // check whether to return directly from cache if already calculated.
+        if(this->cached_run_id == run_id || this->being_evaluated == 1){  // check whether to return directly from cache if already calculated.
             if(TELEMETRY == 2) { std::cout << "Result returned from cache. id=" << this->id << " size=" << this->x * this->y * this->z << std::endl;}
             return cached_activation_values;
         }else if(this->is_input_layer){
@@ -715,7 +710,7 @@ public:
         }else{
             // this is detecting loop
             print_telm("Loop detected in calculating backprop error.");
-            return(this->cached_activation_values);
+            return(activation_error);
         }
 
         if(this->is_input_layer == 1){

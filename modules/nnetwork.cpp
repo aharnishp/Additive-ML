@@ -524,6 +524,10 @@ class nnetwork{
     //  | || (_) | | |    | | |  __/
     //   \__\___/  |_|    |_|_|\___|
 
+    /**
+     * @brief export all the layers of the network to a file
+     * @param filepath string of path to the file to be exported
+    */
     def_uint_small_t export_nnetwork_to_file(string filepath){
         string File_Header;
 
@@ -537,7 +541,7 @@ class nnetwork{
         //      insert header to the export buffer
         
         // store network file to buffer
-        std::vector<char> export_buffer = {'a','d','N','N',','};    // init with the file magic number
+        std::vector<char> export_buffer = {'A','N','N',','};    // init with the file magic number
         // TODO: Add header binaries
 
         // export the data version in single byte
