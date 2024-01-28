@@ -103,6 +103,7 @@ def_float_t get_rand_float_seeded(unsigned int seed){ srand(seed); return ( (flo
 // {
 class nlayer{
 
+public:
 
     // general info
     def_uint_t id = 0;
@@ -236,7 +237,7 @@ class nlayer{
      * @param n The column index of the weight matrix.
     */
     inline def_uint_t flat_indx(def_uint_t m, def_uint_t n){
-        return ( this->weight_inp_allocated * m + n );    // assuming row major for faster forward prop        
+        return ( (this->weight_inp_allocated * n) + m );    // assuming row major for faster forward prop
         // if(this->layer_type==Fully_Connected_INPUTS){
         //     if(m < weight_inp && n < weight_out){
         //         return ( weight_inp_allocated * m + n );    // assuming row major for faster forward prop
@@ -248,7 +249,7 @@ class nlayer{
         // return (0);
     }
 
-    inline def_uint_t get_default_reserve_size(def_uint_t actual_size){
+    static inline def_uint_t get_default_reserve_size(def_uint_t actual_size){
         return (actual_size * 1.5);
         // return (actual_size + 2);
     }
@@ -265,10 +266,31 @@ class nlayer{
     //     }
     // }
 
+
+    /**
+     * @breif initialize the weight matrix of size weight_inp * weight_out with random values.
+     * @param random_values If 1, then initialize with random values, else initialize all with 0.
+     * @param reserve If 1, then reserve more space than required to reduce matrix growing overhead.
+    */
     def_uint_small_t init_weight(def_uint_small_t random_values, def_uint_small_t reserve) {
         if(this->layer_type == Fully_Connected_INPUTS){
             this->weights.clear();
             // this->weights.resize(weight_inp * weight_out);
+
+            def_uint_small_t has_relu = 0;
+            def_uint_small_t is_input = 1;  // check if the only input layer is the network's input layer, no need to make current layer reserve more inputs
+            // check if input layers include any ReLU layer
+            for(int i = 0; i < this->input_layers.size(); i++){
+                if(this->input_layers[i]->is_input_layer == 0){
+                    is_input = 0;   // there exists atleast one input layer which is not the network's input layer
+                }
+                if(this->input_layers[i]->activationFn == ReLU || this->input_layers[i]->activationFn == LReLU){
+                    has_relu = 1;
+                    // break;
+                }
+            }
+
+
             if(reserve){
                 this->weight_inp_allocated = get_default_reserve_size(weight_inp);
                 this->weight_out_allocated = (weight_out);
@@ -285,14 +307,7 @@ class nlayer{
                 return 1;
             }
 
-            def_uint_small_t has_relu = 0;
-            // check if input layers include any ReLU layer
-            for(int i = 0; i < this->input_layers.size(); i++){
-                if(this->input_layers[i]->activationFn == ReLU || this->input_layers[i]->activationFn == LReLU){
-                    has_relu = 1;
-                    break;
-                }
-            }
+
             if(random_values){
                 if(has_relu){
                     // He initialization
@@ -324,9 +339,10 @@ class nlayer{
                 }
 
             }else{
-                for(int i = 0; i < weight_inp_allocated * weight_out_allocated; i++){
-                    this->weights[i] = 0;
-                }
+                memset(weights.data(), 0, sizeof(def_float_t) * weight_inp_allocated * weight_out_allocated);
+                // for(int i = 0; i < weight_inp_allocated * weight_out_allocated; i++){
+                //     this->weights[i] = 0;
+                // }
             }
 
             this->bias.clear();
@@ -425,21 +441,23 @@ class nlayer{
                         input_vector[i] = 0;
                     }
                 }
-            }else if(this->activationFn == Exponential){    // FIXME:
+            }else if(this->activationFn == Exponential){    // TODO:
                 std::cout << "Currently not supporting back prop on exponential activation fn" << std::endl;
                 // for(int i = 0; i < input_vector.size(); i++){   // SIMD
                     
                 // }
-            }else if(this->activationFn == Sigmoid){        // FIXME:
+            }else if(this->activationFn == Sigmoid){        // TODO:
+                std::cout << "Currently not supporting back prop on exponential activation fn" << std::endl;
                 
             }else if(this->activationFn == Softmax){
+                std::cout << "Currently not supporting back prop on exponential activation fn" << std::endl;
                 
             }
         #endif
     }
 
     /**
-     * @brief Automatically grow weights to match the input and output size of the layer.
+     * @brief Automatically resize weights to match the input and output size of the layer.
      * @return 0 if successful, 1 if failed.
     */
     def_uint_small_t auto_grow_weight(){
@@ -487,16 +505,22 @@ class nlayer{
         if(this->layer_type == Fully_Connected_INPUTS){
             this->weight_inp = new_weight_inp;
             this->weight_out = new_weight_out;
-            this->init_weight(1);
+            this->init_weight(1,1);
             return 0;
         }else{
             return 1;
         }
     }
 
-    def_uint_small_t grow_weights(def_uint_t new_weight_inp, def_uint_t new_weight_out, def_uint_small_t random_values){
-        if(this->layer_type == Fully_Connected_INPUTS){
-            // preserve data and insert additional columns or rows
+    /**
+     * @breif increase the size of weights matrix.
+     * @param new_weight_inp The new number of columns in the weight matrix.
+     * @param new_weight_out The new number of rows in the weight matrix.
+     * @param random_values If 1, then initialize with random values, else initialize all with 0.
+    */
+    def_uint_small_t grow_weights(def_uint_t new_weight_inp, def_uint_t new_weight_out, def_uint_small_t randon_values){ //, def_uint_small_t reserve_new){
+        def_uint_small_t reserve_new = 1;
+        if(this->layer_type == Fully_Connected_INPUTS) {
             def_int_t cols_add = new_weight_inp - this->weight_inp;
             def_int_t rows_add = new_weight_out - this->weight_out;
 
@@ -507,39 +531,136 @@ class nlayer{
                 }else if(new_weight_inp != 0 && new_weight_out != 0){   // new both weight dimensions != 0
                     this->weight_inp = new_weight_inp;
                     this->weight_out = new_weight_out;
-                    this->init_weight(1);
+                    this->init_weight(1,1);
                     return 0;
                 }
             }
-            if(cols_add > 0){
-                // add columns
-                for(int i = 0; i < this->weight_out; i++){
-                    for(int j = 0; j < cols_add; j++){
-                        this->weights.insert(this->weights.begin() + (i*this->weight_inp) + this->weight_inp + j, (random_values ? get_rand_float() : 0));
+
+            // assuming Row Major Storing Matrix
+            // handling number of rows first
+            if(rows_add > 0){
+                if(new_weight_out <= weight_out_allocated){
+                    // if new_weight_out is less than allocated, then just increase the weight_out
+                    this->weight_out = new_weight_out;
+                }else{
+                    // if new_weight_out is more than allocated, then increase the weight_out_allocated
+                    if(reserve_new){
+                        this->weight_out_allocated = get_default_reserve_size(new_weight_out);
+                    }else{
+                        this->weight_out_allocated = new_weight_out;
                     }
+                    this->weight_out = new_weight_out;
+                    this->weights.resize(this->weight_inp_allocated * this->weight_out_allocated);
                 }
             }else if(cols_add < 0){
-                print_err("Error: Cannot shrink weight cols of matrix. Use shrink matrix instead.");
-            }
-            if(rows_add > 0){
-                // add rows
-                for(int i = 0; i < rows_add; i++){
-                    for(int j = 0; j < this->weight_inp; j++){
-                            this->weights.push_back(random_values ? get_rand_float() : 0);
-                    }
-                }
-            }else if(rows_add < 0){
                 print_err("Error: Cannot shrink weight rows of matrix. Use shrink matrix instead.");
             }
-            this->weight_inp = new_weight_inp;
-            this->weight_out = new_weight_out;
-            return 0;
-        }else{
-            return 1;
+
+            // handling number of columns
+            if(cols_add > 0){
+                if(new_weight_inp <= weight_inp_allocated){
+                    // if new_weight_inp is less than allocated, then just increase the weight_inp
+                    this->weight_inp = new_weight_inp;
+                }else{
+                    def_uint_t delta_col_alloc = new_weight_inp - this->weight_inp_allocated;
+
+                    def_uint_t old_weight_inp_allocated = this->weight_inp_allocated;
+                    def_uint_t old_weight_inp = this->weight_inp;
+
+                    if(reserve_new){
+                        this->weight_inp_allocated = get_default_reserve_size(new_weight_inp);
+                    }else{
+                        this->weight_inp_allocated = new_weight_inp;
+                    }
+
+                    this->weight_inp = new_weight_inp;
+                    this->weights.resize(this->weight_inp_allocated * this->weight_out_allocated);
+
+                    // the weight matrix is now resized, now shifting weights to actual position as it is flattened
+                    // for each yth row from last copying weights from block((y*old_weight_inp_allocated) <= i < ((y+1)*old_weight_inp_allocated) to postion(y*weight_inp_allocated)
+                    // for each row from last to first
+                    for(int row = weight_out - 1; row >= 0; row--){
+                        // for each element in the block
+                        for(int n = old_weight_inp - 1; n >= 0; n--){
+                            // copying element from old index to new index
+                            weights[row*weight_inp_allocated + n] = weights[(row*old_weight_inp_allocated + n)];
+
+                        }
+                        // std::copy(weights.data)
+                    }
+
+
+
+                    // if new_weight_inp is more than allocated, then increase the weight_inp_allocated
+                    // if(reserve_new){
+                    //     this->weight_inp_allocated = get_default_reserve_size(new_weight_inp);
+                    // }else{
+                    //     this->weight_inp_allocated = new_weight_inp;
+                    // }
+                    // this->weight_inp = new_weight_inp;
+                    // this->weights.resize(this->weight_inp_allocated * this->weight_out_allocated);
+                }
+
+            }
         }
     }
 
-    #if USE_SIMD 
+
+    // // // DEPRECATED: uses old weight matrix format
+    // def_uint_small_t grow_weights(def_uint_t new_weight_inp, def_uint_t new_weight_out, def_uint_small_t random_values){
+    //     if(this->layer_type == Fully_Connected_INPUTS){
+    //         // preserve data and insert additional columns or rows
+    //         def_int_t cols_add = new_weight_inp - this->weight_inp;
+    //         def_int_t rows_add = new_weight_out - this->weight_out;
+
+    //         if(this->weight_inp == 0 || this->weight_out == 0){     // currently any of the dimension == 0
+    //             if(new_weight_inp == 0 || new_weight_out == 0){     // new atleast one of the weight dimension == 0
+    //                 print_err("Error: Cannot grow weight matrix as one of the dimension is 0.")
+    //                 return 1;
+    //             }else if(new_weight_inp != 0 && new_weight_out != 0){   // new both weight dimensions != 0
+    //                 this->weight_inp = new_weight_inp;
+    //                 this->weight_out = new_weight_out;
+    //                 this->init_weight(1,1);
+    //                 return 0;
+    //             }
+    //         }
+    //         if(cols_add > 0){
+    //             // add columns
+    //             if(random_values){
+    //                 for(int i = 0; i < this->weight_out; i++){
+    //                     for(int j = 0; j < cols_add; j++){
+    //                         this->weights.insert(this->weights.begin() + (i*this->weight_inp) + this->weight_inp + j, get_rand_float());
+    //                     }
+    //                 }
+    //             }else{
+    //                 for(int i = 0; i < this->weight_out; i++){
+    //                     for(int j = 0; j < cols_add; j++){
+    //                         this->weights.insert(this->weights.begin() + (i*this->weight_inp) + this->weight_inp + j, 0);
+    //                     }
+    //                 }
+    //             }
+    //         }else if(cols_add < 0){
+    //             print_err("Error: Cannot shrink weight cols of matrix. Use shrink matrix instead.");
+    //         }
+    //         if(rows_add > 0){
+    //             // add rows
+    //             for(int i = 0; i < rows_add; i++){
+    //                 for(int j = 0; j < this->weight_inp; j++){
+    //                         this->weights.push_back(random_values ? get_rand_float() : 0);
+    //                 }
+    //             }
+    //         }else if(rows_add < 0){
+    //             print_err("Error: Cannot shrink weight rows of matrix. Use shrink matrix instead.");
+    //         }
+    //         this->weight_inp = new_weight_inp;
+    //         this->weight_out = new_weight_out;
+    //         return 0;
+    //     }else{
+    //         return 1;
+    //     }
+    // }
+
+    #if USE_SIMD
     /**
      * @brief Multiply matrices in place, using AVX
      * @param A The first matrix
@@ -618,15 +739,17 @@ class nlayer{
                 print_err("Error weight dimensions are unknown.")
             }
 
+            this->auto_grow_weight();
+
             // check if current layer output size has grown
-            if(weight_out != this->x * this->y * this->z){
-                grow_weights(weight_inp, this->x * this->y * this->z, 1);
-            }
+            // if(weight_out != this->size(){
+            //     grow_weights(weight_inp, this->size(), 1);
+            // }
 
             // confirm if this layer weights are actually flattened appropriately
             if(this->weights.size() != weight_inp * weight_out){
                 // TODO: Make adjust_weight_dimension() to non-destructively handle this. 
-                this->init_weight(1);
+                this->init_weight(1,1);
             }
                             
             // build an array of input activation before calculating itself's activation

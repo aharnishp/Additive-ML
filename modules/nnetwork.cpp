@@ -323,7 +323,7 @@ class nnetwork{
         // new_layer->init_weight(1);
         // this->output_layer = new_layer;
         new_layer->add_input_layer(this->output_layer);
-        new_layer->init_weight(1);
+        new_layer->init_weight(1,1);
         this->output_layer = new_layer;
         return new_layer->id;
     }

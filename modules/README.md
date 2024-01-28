@@ -26,3 +26,10 @@ For computing the forward propagation, all the activations of layers in ```input
 The weights matrix is stored as flattened STL vector, with row major encoding.
 
 ## Convolutional layer
+
+
+## Initialization Technicalities
+When a layer is initialized, it has empty weights vector. 2 properties weight_inp and weight_out define the logical dimensions of the 2D weight matrix.
+
+Once a weight has been resized, or an input layer is added to it, the weight matrix is initialized.
+The initialization takes place by calling the add_input_layer function, which calls auto_grow_weights. auto_grow_weights calculates the number neurons from it's input layers and output size from its own properties. It is hence 
