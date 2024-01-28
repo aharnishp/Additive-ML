@@ -462,13 +462,15 @@ class nnetwork{
         while(unvisited.size()){
             nlayer* this_layer = unvisited[unvisited.size()-1];
             unvisited.pop_back();   // remove from last
+            visited.insert(this_layer);   // insert this to visted
+                       
             std::cout << "# layer-id=" << this_layer->id << " \tlayer-size=" << this_layer->size() << " \tinput_layers:" << std::endl;
             std::cout << "    printing weights(" << this_layer->weight_inp << " x " << this_layer->weight_out << ")" << std::endl;
 
 
             for(int i = 0; i < this_layer->input_layers.size(); i++){
                 std::cout << "    -layer"  << this_layer->input_layers[i]->id << std::endl;
-                if(visited.find(this_layer->input_layers[i]) == visited.end()){
+                if(visited.find(this_layer->input_layers[i]) == visited.end() && std::find(unvisited.begin(), unvisited.end(), this_layer->input_layers[i]) == unvisited.end()){
                     unvisited.push_back(this_layer->input_layers[i]);
                 }
             }

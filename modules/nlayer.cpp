@@ -303,7 +303,10 @@ public:
             def_int_t rand_seed = get_rand_float()*1000;
 
             if(weight_inp == 0 || weight_out == 0){
-                print_err("Error weight dimensions are unknown.")
+                // print_err("Error weight dimensions are unknown.")
+                if(TELEMETRY){
+                    std::cout << "Error: init_weight-> weight dimensions are unknown, id=" << this->id << std::endl;
+                }
                 return 1;
             }
 
@@ -462,8 +465,9 @@ public:
     */
     def_uint_small_t auto_grow_weight(){
         // Calculate current input weight size and output weight size and grow weights accordingly.
+
         
-        if(this->layer_type == Fully_Connected_INPUTS){
+        if(this->is_input_layer != 1 && this->layer_type == Fully_Connected_INPUTS){
             def_uint_t new_weight_inp = 0;
 
             for(int i = 0; i < this->input_layers.size(); i++){
@@ -471,6 +475,10 @@ public:
             }
 
             def_uint_t new_weight_out = this->x * this->y * this->z;
+
+            if(TELEMETRY){
+                std::cout << "auto_grow_weights for id=" << this->id << std::endl;
+            }
 
             return grow_weights(new_weight_inp, new_weight_out, 1);
         }
@@ -520,11 +528,16 @@ public:
     */
     def_uint_small_t grow_weights(def_uint_t new_weight_inp, def_uint_t new_weight_out, def_uint_small_t randon_values){ //, def_uint_small_t reserve_new){
         def_uint_small_t reserve_new = 1;
+        if(TELEMETRY){
+            std::cout << "growing id=" << this->id << " to size=(new_wi=" << new_weight_inp << ",new_wo=" << new_weight_out << ")     (old_wi=" << weight_inp << ",old_w=" << weight_out << ")" <<  std::endl;
+        }
         if(this->layer_type == Fully_Connected_INPUTS) {
             def_int_t cols_add = new_weight_inp - this->weight_inp;
             def_int_t rows_add = new_weight_out - this->weight_out;
 
-            if(this->weight_inp == 0 || this->weight_out == 0){     // currently any of the dimension == 0
+            
+
+            if(this->weight_inp == 0 || this->weight_out == 0){     // currently if any of the dimension == 0
                 if(new_weight_inp == 0 || new_weight_out == 0){     // new atleast one of the weight dimension == 0
                     print_err("Error: Cannot grow weight matrix as one of the dimension is 0.")
                     return 1;

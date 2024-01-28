@@ -24,17 +24,23 @@ int main(){
     nnetwork net(2,2);
 
     net.output_layer->activationFn=Softmax;
-    net.output_layer->init_weight(1,1);
+    // net.output_layer->init_weight(1,1);
+    net.output_layer->auto_grow_weight();
 
     std::cout << "net.output_layer->weights.size() = " << net.output_layer->weights.size() << std::endl;
 
+    // net.add_new_layer_at_last(3,ReLU,learning_rate_def);
 
-    nlayer newl(3,ReLU,0.05);
-    newl.add_input_layer(net.input_layer);
-    net.output_layer->add_input_layer(&newl);
-    newl.init_weight(1,1);
+    // nlayer newl(3,ReLU,0.05);
+    // newl.id=4;
+    // newl.add_input_layer(net.input_layer);
+    // net.output_layer->input_layers.clear();
+    // net.output_layer->add_input_layer(&newl);
+    // newl.auto_grow_weight();
 
-    net.output_layer->auto_grow_weight();
+    net.print_architecture();
+
+    // net.output_layer->auto_grow_weight();
     
     // net.output_layer->auto_grow_weight(2,2)
 
