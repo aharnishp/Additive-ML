@@ -465,6 +465,8 @@ public:
     */
     def_uint_small_t auto_grow_weight(){
         // Calculate current input weight size and output weight size and grow weights accordingly.
+        this->fix_weights();
+        return 0;
 
         
         if(this->is_input_layer != 1 && this->layer_type == Fully_Connected_INPUTS){
@@ -521,12 +523,112 @@ public:
     }
 
     /**
+     * @breif calculate the size of expected layer's inputs and outputs, and resize weights matrix with reserve
+    */
+    def_uint_t fix_weights(){
+        def_uint_small_t random_weight_init = 1;
+
+        if(this->layer_type == Fully_Connected_INPUTS){
+            // calculate the size of expected layer's inputs and outputs, and resize weights matrix with reserve
+            def_uint_t new_weight_inp = 0;
+            for(int i = 0; i < this->input_layers.size(); i++){
+                new_weight_inp += this->input_layers[i]->size();
+            }
+            def_uint_t new_weight_out = this->size();
+
+            if(TELEMETRY){
+                std::cout << "fix_weights for id=" << this->id << std::endl;
+            }
+
+            // if any of it is 0, then return error
+            if(new_weight_inp == 0 || new_weight_out == 0){
+                if(TELEMETRY){
+                    std::cout << "Error: fix_weights-> one of the dimension is 0, id=" << this->id << " size=(new_wi=" << new_weight_inp << ",new_wo=" << new_weight_out << ")     (old_wi=" << weight_inp << ",old_w=" << weight_out << ")" <<  std::endl;
+                }
+                return 1;
+            }
+
+            // change what is necessary
+            if(new_weight_inp > this->weight_inp && this->weight_out_allocated > 0){
+                // if already allocated, then just change the weight_inp
+                def_uint_t old_weight_inp = this->weight_inp;
+                if(new_weight_inp <= this->weight_inp_allocated){
+                    this->weight_inp = new_weight_inp;
+                }else{
+                    // if not allocated, then allocate more
+                    def_uint_t old_weight_inp_allocated = this->weight_inp_allocated;
+                    this->weight_inp_allocated = get_default_reserve_size(new_weight_inp);
+                    this->weights.resize(this->weight_inp_allocated * this->weight_out_allocated);
+
+                    // shift the weights to conform as a flattened matrix
+                    // for each yth row from last copying weights from block((y*old_weight_inp_allocated) <= i < ((y+1)*old_weight_inp_allocated) to postion(y*weight_inp_allocated)
+                    // for each row from last to first
+                    for(int row = weight_out - 1; row >= 0; row--){
+                        // for each element as a block to make it vectorizable
+                        for(int n = old_weight_inp_allocated - 1; n >= 0; n--){
+                            // copying element from old index to new index
+                            weights[row*weight_inp_allocated + n] = weights[(row*old_weight_inp_allocated + n)];
+                        }
+                    }
+                    this->weight_inp = new_weight_inp;
+                }
+                if(random_weight_init){
+                    // if random weight init, then initialize the new weights
+                    for(int i = 0; i < this->weight_out; i++){
+                        for(int j = old_weight_inp; j < this->weight_inp; j++){
+                            this->weights[flat_indx(j, i)] = get_rand_float();
+                        }
+                    }
+                }
+            }else if(new_weight_inp > this->weight_inp){ // this is when weight_out is 0, but just for safety
+                this->weight_inp = new_weight_inp;
+                this->weight_inp_allocated = get_default_reserve_size(new_weight_inp);
+            }
+
+            std::cout << "current weight.flattened_size() = " << weights.size() << " size=(new_wi=" << new_weight_inp << ",new_wo=" << new_weight_out << ")     (old_wi=" << weight_inp << ",old_w=" << weight_out << ")" <<  std::endl;
+
+            if(new_weight_out > this->weight_out || (this->weight_out_allocated == 0 &&  this->weight_inp_allocated > 0)){
+                def_uint_t old_weight_out = this->weight_out;
+                def_uint_t old_weight_out_allocated = this->weight_out_allocated;
+                // if already allocated, then just change the weight_out
+                if(new_weight_out <= this->weight_out_allocated){
+                    this->weight_out = new_weight_out;
+
+                }else{
+                    // if not allocated, then allocate more
+                    def_uint_t old_weight_out_allocated = this->weight_out_allocated;
+                    this->weight_out_allocated = get_default_reserve_size(new_weight_out);
+                    this->weights.resize(this->weight_inp_allocated * this->weight_out_allocated);
+
+                    this->weight_out = new_weight_out;
+                }
+                if(random_weight_init){
+                    // if random weight init, then initialize the new weights
+                    for(int i = old_weight_out_allocated; i < this->weight_out; i++){
+                        for(int j = 0; j < this->weight_inp; j++){
+                            this->weights[flat_indx(j, i)] = get_rand_float();
+                        }
+                    }
+                }
+            }
+    
+
+        }
+        std::cout << "Weights fixed!" << std::endl;
+
+        return 0;
+
+    }
+
+    /**
      * @breif increase the size of weights matrix.
      * @param new_weight_inp The new number of columns in the weight matrix.
      * @param new_weight_out The new number of rows in the weight matrix.
      * @param random_values If 1, then initialize with random values, else initialize all with 0.
     */
     def_uint_small_t grow_weights(def_uint_t new_weight_inp, def_uint_t new_weight_out, def_uint_small_t randon_values){ //, def_uint_small_t reserve_new){
+        fix_weights();
+        return 0;
         def_uint_small_t reserve_new = 1;
         if(TELEMETRY){
             std::cout << "growing id=" << this->id << " to size=(new_wi=" << new_weight_inp << ",new_wo=" << new_weight_out << ")     (old_wi=" << weight_inp << ",old_w=" << weight_out << ")" <<  std::endl;
