@@ -614,7 +614,7 @@ public:
     
 
         }
-        std::cout << "Weights fixed!" << std::endl;
+        // std::cout << "Weights fixed!" << std::endl;
 
         return 0;
 
@@ -629,6 +629,8 @@ public:
     def_uint_small_t grow_weights(def_uint_t new_weight_inp, def_uint_t new_weight_out, def_uint_small_t randon_values){ //, def_uint_small_t reserve_new){
         fix_weights();
         return 0;
+
+
         def_uint_small_t reserve_new = 1;
         if(TELEMETRY){
             std::cout << "growing id=" << this->id << " to size=(new_wi=" << new_weight_inp << ",new_wo=" << new_weight_out << ")     (old_wi=" << weight_inp << ",old_w=" << weight_out << ")" <<  std::endl;
@@ -829,6 +831,20 @@ public:
     }
     #endif
 
+    /**
+     * @brief function for assisting debugging
+    */
+    void print_weights(){
+        // takes care of reserved weights.
+        std::cout << "Weight id=" << this->id << " weights.size()=" << this->weights.size() << " = (" << this->weight_inp <<  "x" << this->weight_inp<< "), allocated=(" << this->weight_inp_allocated << "," << this->weight_out_allocated << ")" << std::endl;
+        for(int i = 0; i < this->weight_out; i++){
+            for(int j = 0; j < this->weight_out; j++){
+                std::cout << this->weights[flat_indx(i,j)] << " ";
+            }
+            std::cout << std::endl;
+        }
+    }
+
     std::vector<def_float_t> get_activation_rec(def_int_t run_id, def_uint_t batch_size){
         // this is memory in efficient, but faster to implement.
         if(this->cached_run_id == run_id || this->being_evaluated == 1){  // check whether to return directly from cache if already calculated.
@@ -863,7 +879,6 @@ public:
 
             // confirm if this layer weights are actually flattened appropriately
             if(this->weights.size() != weight_inp * weight_out){
-                // TODO: Make adjust_weight_dimension() to non-destructively handle this. 
                 this->init_weight(1,1);
             }
                             

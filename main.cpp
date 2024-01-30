@@ -25,7 +25,9 @@ int main(){
 
     net.output_layer->activationFn=Softmax;
     // net.output_layer->init_weight(1,1);
-    net.output_layer->auto_grow_weight();
+    net.output_layer->fix_weights();
+
+    net.output_layer->print_weights();
 
     std::cout << "net.output_layer->weights.size() = " << net.output_layer->weights.size() << std::endl;
 
