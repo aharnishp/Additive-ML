@@ -18,6 +18,7 @@
 //// Compile Time Parameters 
 #define Low_Memory_Target 0
 
+#define weight_row_major 1
 
 // Compile Parameter Code
 #ifdef Low_Memory_Target
@@ -237,16 +238,11 @@ public:
      * @param n The column index of the weight matrix.
     */
     inline def_uint_t flat_indx(def_uint_t m, def_uint_t n){
-        return ( (this->weight_inp_allocated * n) + m );    // assuming row major for faster forward prop
-        // if(this->layer_type==Fully_Connected_INPUTS){
-        //     if(m < weight_inp && n < weight_out){
-        //         return ( weight_inp_allocated * m + n );    // assuming row major for faster forward prop
-        //     }else{
-        //         print_err("Error: weight_indx_flattened() index out of bounds.");
-        //         return (0);
-        //     }
-        // }
-        // return (0);
+        #if weight_row_major 1
+            return ( (this->weight_inp_allocated * n) + m );    // assuming row major for faster forward prop
+        #else
+            return ( (this->weight_out_allocated * m) + n );    // assuming column major for faster forward prop
+        #endif
     }
 
     static inline def_uint_t get_default_reserve_size(def_uint_t actual_size){
@@ -878,9 +874,7 @@ public:
             // }
 
             // confirm if this layer weights are actually flattened appropriately
-            if(this->weights.size() != weight_inp * weight_out){
-                this->init_weight(1,1);
-            }
+            this->fix_weights();
                             
             // build an array of input activation before calculating itself's activation
             std::vector<def_float_t> input_activations;
@@ -908,12 +902,7 @@ public:
 
                 // printing this->weights
                 if(TELEMETRY == 2) {
-                    std::cout << "&this(id)= " << id << "  \t" << this << std::endl;
-                    std::cout << "this->weight_inp=" << this->weight_inp << "\t this->weight_out=" << this->weight_out << std::endl;
-                    std::cout << "this->weights.size=" << this->weights.size() << "\t this->weights flattened values=" << std::endl;
-                        for(int i = 0; i < this->weights.size(); i++){ 
-                            std::cout << this->weights[i] << " ";
-                        }std::cout << std::endl;
+                    this->print_weights();
                 }
 
                 #if USE_SIMD
@@ -934,7 +923,11 @@ public:
                     for (int out = 0; out < weight_out; out++) {
                         def_float_t result = 0.0f;
                         for (int in = 0; in < weight_inp; in++) {
-                            result += input_activations[batch * weight_inp + in] * this->weights[in * weight_out + out];
+                            #if weight_row_major 1
+                                result += input_activations[batch * weight_inp + in] * this->weights[flat_indx(in, out)];
+                            #else
+                                result += input_activations[batch * weight_inp + in] * this->weights[in * weight_out + out];
+                            #endif
                         }
                         output_vector[batch * weight_out + out] = result;
                     }
