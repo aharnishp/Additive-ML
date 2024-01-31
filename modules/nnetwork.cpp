@@ -424,6 +424,7 @@ class nnetwork{
         // }
         // std::transform(this->output_layer->cached_activation_values.begin(), this->output_layer->cached_activation_values.end(), expected_values.begin(), std::back_inserter(error_in_prediction), std::minus<def_float_t>());
 
+        // FIXME: Make sure the calculations are batch-major (errors across multiple batches are contiguous per neuron)
         for(int i = 0; i < expected_values.size(); i++){
             error_in_prediction.push_back(this->output_layer->cached_activation_values[i] - expected_values[i]);
             // error_in_prediction.push_back(expected_values[i] - this->output_layer->cached_activation_values[i]);

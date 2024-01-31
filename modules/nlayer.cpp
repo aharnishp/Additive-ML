@@ -163,8 +163,7 @@ public:
     // FIXME:
     // stores the value of last activation
     // if a convolutional layer, then cached values would be 3D,
-    // if a normal layer, then cached values would be 1D
-    // NOTE: is now 1D flattened vector expected as row major
+    // if a normal layer, then cached values would be 2D flattened to 1D, it would be column major and of size layer.size() * batch_size with adjacent neurons adjacent in single batch
     std::vector<def_float_t> cached_activation_values;
 
 
@@ -234,8 +233,8 @@ public:
     
     /**
      * @brief returns the index of the weight matrix in the flattened vector.
-     * @param m The row index of the weight matrix.
-     * @param n The column index of the weight matrix.
+     * @param m The row index of the weight matrix. max val = weight_inp 
+     * @param n The column index of the weight matrix. max val = weight_out
     */
     inline def_uint_t flat_indx(def_uint_t m, def_uint_t n){
         #if weight_row_major 1
@@ -842,7 +841,7 @@ public:
     }
 
     std::vector<def_float_t> get_activation_rec(def_int_t run_id, def_uint_t batch_size){
-        // this is memory in efficient, but faster to implement.
+        // this is memory inefficient, but faster to implement.
         if(this->cached_run_id == run_id || this->being_evaluated == 1){  // check whether to return directly from cache if already calculated.
             if(TELEMETRY == 2) { std::cout << "Result returned from cache. id=" << this->id << " size=" << this->x * this->y * this->z << std::endl;}
             return cached_activation_values;
@@ -898,7 +897,8 @@ public:
 
             if(input_activations.size() == weight_inp*batch_size){
                 // do the matrix multiplication
-                std::vector<def_float_t> output_vector(weight_out*batch_size);
+                std::vector<def_float_t> output_vector;
+                output_vector.resize(weight_out*batch_size);
 
                 // printing this->weights
                 if(TELEMETRY == 2) {
@@ -908,38 +908,49 @@ public:
                 #if USE_SIMD
                 matrix_multiply(this->weights.data(), input_activations.data(), output_vector, weight_inp, weight_out, batch_size);
                 #else
-                // // performing matrix multiplication
-                // for(int batch = 0; batch < batch_size; batch++){
-                //     for(int m = 0; m < weight_out; m++){
-                //         def_float_t result = 0;
-                //         for(int n = 0; n < weight_inp; n++){
-                //             result += input_activations[batch*weight_inp + n] * this->weights[m*weight_inp + n];
-                //         }
-                //         output_vector[batch * weight_out + m] = result;
-                //     }
-                // }
-                #endif
-                for (int batch = 0; batch < batch_size; batch++) {
-                    for (int out = 0; out < weight_out; out++) {
-                        def_float_t result = 0.0f;
-                        for (int in = 0; in < weight_inp; in++) {
-                            #if weight_row_major 1
-                                result += input_activations[batch * weight_inp + in] * this->weights[flat_indx(in, out)];
-                            #else
-                                result += input_activations[batch * weight_inp + in] * this->weights[in * weight_out + out];
-                            #endif
+                #if weight_row_major 1
+                    // FIXME: Make sure the output_vector is column major ( the activations of single batch sample are contiguous )
+                    // performing matrix multiplication
+                    for(int batch = 0; batch < batch_size; batch++){
+                        for(int m = 0; m < weight_out; m++){
+                            def_float_t result = 0;
+                            for(int n = 0; n < weight_inp; n++){
+                                result += input_activations[batch*weight_inp + n] * this->weights[m*weight_inp + n];
+                            }
+                            output_vector[batch * weight_out + m] = result;
                         }
-                        output_vector[batch * weight_out + out] = result;
-                    }
-                }
+                    }                    
+                    // output_vector is column major, such that the activations of single batch sample are contiguous
+                #else
+                    // for (int batch = 0; batch < batch_size; batch++) {
+                    //     for (int out = 0; out < weight_out; out++) {
+                    //         def_float_t result = 0.0f;
+                    //         for (int in = 0; in < weight_inp; in++) {
+                    //             #if weight_row_major 1
+                    //                 result += input_activations[batch * weight_inp + in] * this->weights[flat_indx(in, out)];
+                    //             #else
+                    //                 result += input_activations[batch * weight_inp + in] * this->weights[in * weight_out + out];
+                    //             #endif
+                    //         }
+                    //         output_vector[batch * weight_out + out] = result;
+                    //     }
+                    // }
+                #endif
+                #endif
 
 
                 if(TELEMETRY == 2){ if(bias.size() != weight_out){ std::cout << "this->bias uninitialized. this=" << this << std::endl; } }
                 
                 // add bias to result
-                for (int i = 0; i < weight_out*batch_size; i++) {
-                    output_vector[i] += this->bias[i%weight_out];   // add bias to all elements in the batch
+                // adding assuming column major
+                for(int batch = 0; batch < batch_size; batch++){
+                    for(int i = 0; i < weight_out; i++){
+                        output_vector[batch * weight_out + i] += this->bias[i];
+                    }
                 }
+                // for (int i = 0; i < weight_out*batch_size; i++) {
+                //     output_vector[i] += this->bias[i%weight_out];   // add bias to all elements in the batch
+                // }
                 
 
                 // apply activation function
@@ -987,11 +998,61 @@ public:
         return empty_vector;
     }
 
+    // def_uint_small_t retrieve_previous_inputs_col_major(std::vector<def_float_t> &collected_vec, def_uint_t batch_size){
+    //     // assuming cached activation values are column major
+    //     for(int batch = 0; batch < batch_size; batch++){
+    //         for(int lindx = 0; lindx < this->input_layers.size(); lindx++){
+    //             // append this layer's size worth of activations to 
+    //         }
+    //     }
+    //     return 0;
+    // }
+
+
+    /**
+     * @breif retrieve previous activations from corresponding input layers as  batch-major
+     * @param collected_vec reference to empty output vec batch-major flattened vec
+     * @param batch_size uint of number of batches
+    */
+    def_uint_small_t retrieve_previous_inputs_batch_major(std::vector<def_float_t> &collected_vec, def_uint_t batch_size){
+        // assuming cached activation values are column major
+        for(int lindx = 0; lindx < this->input_layers.size(); lindx++){
+            nlayer * this_layer = this->input_layers[lindx];
+            if(this_layer->cached_batch_size != batch_size){
+                print_err("Error: previous inputs batch size incorrect. id=" << this->id);
+                return 1;
+            }
+            def_uint_t layer_size = this_layer->size();
+            for(int n = 0; n < layer_size; n++){
+                for(int batch = 0; batch < batch_size; batch++){                    
+                    collected_vec.push_back(this_layer->cached_activation_values[(batch*layer_size)+n]);
+                }
+            }
+        }
+        return 0;
+    }
+
+    def_uint_small_t calc_delta_weight(std::vector<def_float_t> &delta_weights, std::vector<def_float_t> &last_input, std::vector<def_float_t> &error_diff, def_uint_t batch_size){
+        def_float_t sum = 0;
+        // assuming error_diff and last-inputs as batch-major 
+        for(int drow = 0; drow < weight_out; drow++){
+            for(int acol = 0; acol < weight_inp; acol++){
+                sum = 0;
+                for(int batch = 0; batch < batch_size; batch++){
+                    sum += error_diff[batch_size*drow + batch]*last_input[batch_size*acol + batch];
+                }
+                delta_weights[weight_inp * drow + acol] = sum;
+            }
+        }
+
+        return 0;
+    }
+
     /**
      * @brief Calculate the backprop error for this layer.
      * @param run_id The run_id of the current run.
      * @param batch_size The batch size of the current run.
-     * @param activation_error The error of the next layer.\
+     * @param activation_error The error of the next layer.
      * @param learning_rate The learning rate of the current run.
     */
     std::vector<def_float_t> get_correct_error_rec(def_int_t run_id, def_uint_t batch_size, std::vector<def_float_t>& activation_error, def_float_t learning_rate){
@@ -1009,14 +1070,23 @@ public:
         }
 
         if(this->layer_type == Fully_Connected_INPUTS){
-            // check if backprop errors are fresh, otherwise, wrong errors will be calculated.
+            // check if forward prop caches errors are fresh, otherwise, wrong errors will be calculated.
             if(this->cached_run_id < run_id){
                 if(TELEMETRY) {std::cout << "Uncalculated forward prop cache detected. this=" << this << std::endl;}
-                this->get_activation_rec(run_id, batch_size);
+                this->get_activation_rec(run_id, batch_size);    // recalculating forward prop
             }
 
-            std::vector<def_float_t> error_diff;
-            error_diff.reserve(activation_error.size());
+            // check if forward prop batch size is same as backprop batch size
+            if(this->cached_batch_size != batch_size){
+                print_err("Error: Forward prop batch size does not match backprop batch size.")
+                this->being_corrected = 0;
+                return activation_error;
+            }
+
+
+            // activation_error is the error in current layer // dZ_0 = A_l_0 - Y_ground-truth
+            // std::vector<def_float_t> error_diff;    // dZ_0 = A_l_0 - Y_ground-truth
+            // error_diff.reserve(activation_error.size());
             #if USE_SIMD    // TODO: Add SIMD instructions
             
             #else
@@ -1025,54 +1095,80 @@ public:
                 //     error_diff.push_back(this->cached_acivation_values[i] - activation_error[i]);
                 // }
                 
+                // notation: A_l_-1
                 // generate a list of last inputs
-                std::vector<def_float_t> last_inputs;
-                last_inputs.reserve(this->weight_inp);
-
+                std::vector<def_float_t> last_inputs;   // A_l_-1
+                last_inputs.resize(this->weight_inp * batch_size);
+                
                 this->being_evaluated = 1;
 
-                for(int i = 0; i < this->input_layers.size(); i++){
-                    // asking layer for their activation
-                    std::vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id, batch_size);
-                    last_inputs.insert(last_inputs.end(), new_activation.begin(), new_activation.end());
 
-                    // currently taking cached values directly from input_layers
-                    // if (this->input_layers[i]->cached_run_id == run_id){
-                    //     last_inputs.insert(last_inputs.end(), this->input_layers[i]->cached_acivation_values.begin(), this->input_layers[i]->cached_acivation_values.end());
-                    // }else{
-                    //     std::vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id, batch_size);
-                    //     last_inputs.insert(last_inputs.end(), new_activation.begin(), new_activation.end());
-                    // }
+                // expecting the cached_activation_values to be column major
+                // DONE: rewrite such that last_inputs are in batch-major flattened format. 
+                if(retrieve_previous_inputs_batch_major(last_inputs,batch_size) == 1){
+                    // returned 1 means error
+                    this->being_corrected = 0;
+                    return activation_error;
                 }
+
+
+                // LEGACY: 
+                // for(int i = 0; i < this->input_layers.size(); i++){
+                //     // asking this layer's input_layers for their activation
+                //     if(this->input_layers[i]->cached_batch_size == batch_size){
+                //         // std::vector<def_float_t> new_activation = this->input_layers[i]->get_activation_rec(run_id, batch_size);
+                //         last_inputs.insert(last_inputs.end(), this->input_layers[i]->cached_activation_values.begin(), this->input_layers[i]->cached_activation_values.end());
+                //     }else{
+                //         print_err("Error: Input layer batch size does not match backprop batch size.")
+                //         this->being_corrected = 0;
+                //         return activation_error;
+                //     }
+                // }
 
                 this->being_evaluated = 0;
 
 
 
                 std::vector<def_float_t> delta_weight;   // the dimensions are same as weights matrix
-                delta_weight.reserve(this->weight_inp * this->weight_out);
+                delta_weight.resize(this->weight_inp * this->weight_out);
 
                 def_float_t reci_batch_size = 1.0/batch_size;
                 
-                // Matrix Multiply to get delta_weights
                 def_float_t sum = 0;
-                // FIXME: Rewrite code to generate Matrix
-                for(int col = 0; col < weight_inp; col++){
-                    for(int row = 0; row < weight_out; row++){
-                        sum = 0;
-                        for(int batch_num = 0; batch_num < batch_size; batch_num++){
-                            sum += activation_error[(batch_num*this->weight_out) + row] * last_inputs[(batch_num*this->weight_inp) + col];
-                        }
 
-                        delta_weight.push_back(sum * reci_batch_size);
-                    }
-                }
+                // DONE: Rewrite code to generate delta_weights Matrix
+                def_uint_small_t success = calc_delta_weight(delta_weight, last_inputs, activation_error, batch_size);
+                // // assumes that activation_error & last_inputs are in batch_major form
+                // for(int drow = 0; drow < this->weight_out; drow++){
+                //     for(int acol = 0; acol < this->weight_inp; acol++){
+                //         sum = 0;
+                //         for(int batch_num = 0; batch_num < batch_size; batch_num++){
+                //             sum += activation_error[batch_size*drow + batch_num] * last_inputs[batch_size*acol + batch_num];
+                //         }
+                //         delta_weight[weight_inp*drow + acol] = sum;
+                //     }
+                // }
+
+
+                // LEGACY: is not in current batch major format
+                // Matrix Multiply to get delta_weights
+                // def_float_t sum = 0;
+                // for(int col = 0; col < weight_inp; col++){
+                //     for(int row = 0; row < weight_out; row++){
+                //         sum = 0;
+                //         for(int batch_num = 0; batch_num < batch_size; batch_num++){
+                //             sum += activation_error[(batch_num*this->weight_out) + row] * last_inputs[(batch_num*this->weight_inp) + col];
+                //         }
+
+                //         delta_weight.push_back(sum * reci_batch_size);
+                //     }
+                // }
 
                 if(TELEMETRY == 2){
                     std::cout << "# delta_weight = " << std::endl;
                     for (int i = 0; i < weight_inp; i++) {
                         for (int j = 0; j < weight_out; j++) {
-                            std::cout << delta_weight[i * weight_out + j] << " ";
+                            std::cout << delta_weight[j * weight_inp + i] << " ";
                         }
                         std::cout << std::endl;
                     }
@@ -1082,6 +1178,7 @@ public:
                 std::vector<def_float_t> delta_bias;    // empty vec
                 delta_bias.reserve(weight_out);
 
+                // HERE: Checking
                 // summing all errors for each neurons across the batch
                 for (int i = 0; i < weight_out; i++) {
                     def_float_t sum = 0;
@@ -1101,10 +1198,11 @@ public:
 
                 std::vector<def_float_t> old_weights = this->weights;
 
+                // FIXME: Verify if this is working
                 // update weights
-                for(int i = 0; i < weight_out; i++){
-                    for(int j = 0; j < weight_inp; j++){
-                        this->weights[ i * weight_inp + j ] -= (delta_weight[ i * weight_inp + j ] * learning_rate);
+                for(int i = 0; i < weight_inp; i++){
+                    for(int j = 0; j < weight_out; j++){
+                        this->weights[ flat_indx(i,j) ] -= (delta_weight[ weight_inp * j + i ] * learning_rate);
                     }
                 }
 
@@ -1119,6 +1217,8 @@ public:
                 std::vector<def_float_t> input_error;
                 input_error.reserve(this->weight_inp * batch_size);
 
+
+                // FIXME: Make sure that the calculated input_errors are batch-major for fast access, and vectorizability
                 // find the inverse transformation of weights matrix
                 // matrix multiply activation_error and last_inputs
                 for(int i = 0; i < this->weight_inp; i++){
