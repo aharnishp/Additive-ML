@@ -13,7 +13,7 @@
 #define pb push_back
 
 #define train_data_sample_limit 43000
-#define learning_rate_def 0.015625/2
+#define learning_rate_def 0.015625*8
 
 #define epoch_count 1
 
@@ -23,7 +23,7 @@
 int main(){
     nnetwork net(2,2);
 
-    net.output_layer->activationFn=Softmax;
+    net.output_layer->activationFn=ReLU;
     // net.output_layer->init_weight(1,1);
     net.output_layer->fix_weights();
 
@@ -31,7 +31,7 @@ int main(){
 
     std::cout << "net.output_layer->weights.size() = " << net.output_layer->weights.size() << std::endl;
 
-    // net.add_new_layer_at_last(3,ReLU,learning_rate_def);
+    net.add_new_layer_at_last(3,ReLU,learning_rate_def);
 
     // nlayer newl(3,ReLU,0.05);
     // newl.id=4;
@@ -54,12 +54,20 @@ int main(){
     //     net.add_new_layer_at_last(2,ReLU,learning_rate_def);
     // }
 
-    // vector<def_float_t> input = {1,2};
-    // vector<def_float_t> output = {1,2};
+    vector<def_float_t> input = {1,2};
+    vector<def_float_t> output = {1,2};
 
-    // output = net.forward_prop(input,1);
+    output = net.forward_prop(input,1);
 
-    // std::cout << "output =" << output[0] << "," << output[1] << std::endl;
+    std::cout << "output before learning =" << output[0] << "," << output[1] << std::endl;
+
+    for(int i = 0; i < 10; i++){
+        net.backward_prop(input,output, 1);
+    }
+
+    output = net.forward_prop(input,1);
+
+    std::cout << "output after learning =" << output[0] << "," << output[1] << std::endl;
 
     // std::cout << "Network created" << std::endl;
 

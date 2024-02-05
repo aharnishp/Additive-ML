@@ -11,6 +11,8 @@
     #define USE_SIMD 0
 #endif
 
+#define MAE_CALCULATION 1
+
 
 // #define fori(i,n) for(int i = 0; i < n; i++)
 // #define pb push_back
@@ -180,6 +182,11 @@ public:
     def_uint_small_t is_dynamic_layer = 1;
     def_uint_small_t is_input_layer = 0;
 
+    #if MAE_CALCULATION == 1
+        std::vector<def_float_t> mae_vec;  // stores the absolute errors accumulated at each node
+        std::vector<def_uint_t> mae_count;
+    #endif
+
 
     nlayer(){};
 
@@ -237,7 +244,7 @@ public:
      * @param n The column index of the weight matrix. max val = weight_out
     */
     inline def_uint_t flat_indx(def_uint_t m, def_uint_t n){
-        #if weight_row_major 1
+        #if weight_row_major == 1
             return ( (this->weight_inp_allocated * n) + m );    // assuming row major for faster forward prop
         #else
             return ( (this->weight_out_allocated * m) + n );    // assuming column major for faster forward prop
@@ -520,16 +527,19 @@ public:
     /**
      * @breif calculate the size of expected layer's inputs and outputs, and resize weights matrix with reserve
     */
-    def_uint_t fix_weights(){
+    def_uint_t fix_weights(def_uint_t new_weight_inp = 0, def_uint_t new_weight_out = 0){
         def_uint_small_t random_weight_init = 1;
 
         if(this->layer_type == Fully_Connected_INPUTS){
             // calculate the size of expected layer's inputs and outputs, and resize weights matrix with reserve
-            def_uint_t new_weight_inp = 0;
-            for(int i = 0; i < this->input_layers.size(); i++){
-                new_weight_inp += this->input_layers[i]->size();
+            if (new_weight_inp == 0){
+                for(int i = 0; i < this->input_layers.size(); i++){
+                    new_weight_inp += this->input_layers[i]->size();
+                }
             }
-            def_uint_t new_weight_out = this->size();
+            if(new_weight_out == 0){
+                new_weight_out = this->size();
+            }
 
             if(TELEMETRY){
                 std::cout << "fix_weights for id=" << this->id << std::endl;
@@ -541,6 +551,23 @@ public:
                     std::cout << "Error: fix_weights-> one of the dimension is 0, id=" << this->id << " size=(new_wi=" << new_weight_inp << ",new_wo=" << new_weight_out << ")     (old_wi=" << weight_inp << ",old_w=" << weight_out << ")" <<  std::endl;
                 }
                 return 1;
+            }
+
+            // handling bias
+            if(new_weight_out > this->bias.size()){
+                def_uint_t old_bias_size = this->bias.size();
+
+                bias.resize(new_weight_out);
+                if(random_weight_init){
+                    for(int n = old_bias_size; n < new_weight_out; n++){
+                        bias[n] = get_rand_float();
+                    }
+                }else{
+                    for(int n = old_bias_size; n < new_weight_out; n++){
+                        bias[n] = 0;
+                    }
+                }
+                
             }
 
             // change what is necessary
@@ -580,7 +607,9 @@ public:
                 this->weight_inp_allocated = get_default_reserve_size(new_weight_inp);
             }
 
-            std::cout << "current weight.flattened_size() = " << weights.size() << " size=(new_wi=" << new_weight_inp << ",new_wo=" << new_weight_out << ")     (old_wi=" << weight_inp << ",old_w=" << weight_out << ")" <<  std::endl;
+            if(TELEMETRY == 2){
+                std::cout << "current weight.flattened_size() = " << weights.size() << " size=(new_wi=" << new_weight_inp << ",new_wo=" << new_weight_out << ")     (old_wi=" << weight_inp << ",old_w=" << weight_out << ")" <<  std::endl;
+            }
 
             if(new_weight_out > this->weight_out || (this->weight_out_allocated == 0 &&  this->weight_inp_allocated > 0)){
                 def_uint_t old_weight_out = this->weight_out;
@@ -840,6 +869,10 @@ public:
         }
     }
 
+
+    /**
+     * @brief returns activation values of this layer's neurons.
+    */
     std::vector<def_float_t> get_activation_rec(def_int_t run_id, def_uint_t batch_size){
         // this is memory inefficient, but faster to implement.
         if(this->cached_run_id == run_id || this->being_evaluated == 1){  // check whether to return directly from cache if already calculated.
@@ -865,25 +898,55 @@ public:
                 print_err("Error weight dimensions are unknown.")
             }
 
-            this->auto_grow_weight();
-
             // check if current layer output size has grown
             // if(weight_out != this->size(){
             //     grow_weights(weight_inp, this->size(), 1);
             // }
 
             // confirm if this layer weights are actually flattened appropriately
-            this->fix_weights();
                             
             // build an array of input activation before calculating itself's activation
             std::vector<def_float_t> input_activations;
 
-            // collect activations of all layers and append to vector input_activations
-            for(int i = 0; i < this->input_layers.size(); i++){
-                std::vector<def_float_t> new_activation;
-                new_activation = this->input_layers[i]->get_activation_rec(run_id, batch_size);
-                input_activations.insert(input_activations.end(), new_activation.begin(), new_activation.end());
+            // assuming the input_activations are in column_major (such that activations of single batch are contiguous)
+            // collect activations of all layers and append to vector input_activations batch-wise
+            
+            // for(int i = 0; i < this->input_layers.size(); i++){
+            //     std::vector<def_float_t> new_activation;
+            //     new_activation = this->input_layers[i]->get_activation_rec(run_id, batch_size);
+            //     input_activations.insert(input_activations.end(), new_activation.begin(), new_activation.end());
+            // }
+
+            // keep activations ready for each input layer to reduce memory overhead of recursion
+            for(int indx = 0; indx < this->input_layers.size(); indx++){
+                nlayer * this_layer = this->input_layers[indx];
+
+                if(this_layer->cached_run_id != run_id || this_layer->cached_batch_size != batch_size){
+                    this->input_layers[indx]->get_activation_rec(run_id, batch_size);
+                }
             }
+            
+            // traverse layers for each batch
+            for(int batch = 0; batch < batch_size; batch++){
+                for(int indx = 0; indx < this->input_layers.size(); indx++){
+                    nlayer * this_layer = this->input_layers[indx];
+                    // take the cached values directly
+                    if(this_layer->cached_run_id == run_id && this_layer->cached_batch_size == batch_size){
+                        auto start_indx = this_layer->cached_activation_values.begin() + (batch * this_layer->size());
+                        auto end_indx = (this_layer->cached_activation_values.begin() + ((batch + 1) * this_layer->size()));
+                        input_activations.insert(input_activations.end(), start_indx, end_indx);
+                    }else{
+                        std::vector<def_float_t> new_activation;
+                        new_activation = this->input_layers[indx]->get_activation_rec(run_id, batch_size);
+                        auto start_indx = this_layer->cached_activation_values.begin() + (batch * this_layer->size());
+                        auto end_indx = (this_layer->cached_activation_values.begin() + ((batch + 1) * this_layer->size()));
+                        input_activations.insert(input_activations.end(), start_indx, end_indx);
+
+                    }
+                }    
+            }
+
+            this->fix_weights((input_activations.size()/batch_size), this->size());
 
             // check if input size is actually supported
             if(weight_inp * batch_size != input_activations.size()){
@@ -908,14 +971,14 @@ public:
                 #if USE_SIMD
                 matrix_multiply(this->weights.data(), input_activations.data(), output_vector, weight_inp, weight_out, batch_size);
                 #else
-                #if weight_row_major 1
+                #if weight_row_major == 1
                     // FIXME: Make sure the output_vector is column major ( the activations of single batch sample are contiguous )
                     // performing matrix multiplication
                     for(int batch = 0; batch < batch_size; batch++){
                         for(int m = 0; m < weight_out; m++){
                             def_float_t result = 0;
                             for(int n = 0; n < weight_inp; n++){
-                                result += input_activations[batch*weight_inp + n] * this->weights[m*weight_inp + n];
+                                result += input_activations[batch*weight_inp + n] * this->weights[flat_indx(n,m)]; //  previously: + 0*(m*weight_inp + n)
                             }
                             output_vector[batch * weight_out + m] = result;
                         }
@@ -926,7 +989,7 @@ public:
                     //     for (int out = 0; out < weight_out; out++) {
                     //         def_float_t result = 0.0f;
                     //         for (int in = 0; in < weight_inp; in++) {
-                    //             #if weight_row_major 1
+                    //             #if weight_row_major == 1
                     //                 result += input_activations[batch * weight_inp + in] * this->weights[flat_indx(in, out)];
                     //             #else
                     //                 result += input_activations[batch * weight_inp + in] * this->weights[in * weight_out + out];
@@ -1048,6 +1111,18 @@ public:
         return 0;
     }
 
+    #if MAE_CALCULATION == 1
+    void print_accumulated_mae_normalized(){
+        for(int n = 0; n < mae_count.size(); n++){
+            if(mae_count.size() != 0){
+                std::cout << ((mae_vec[n])/mae_count[n]) << "    ";
+            }else{
+                std::cout << 0 << "    ";
+            }
+        }
+    }
+    #endif
+
     /**
      * @brief Calculate the backprop error for this layer.
      * @param run_id The run_id of the current run.
@@ -1137,7 +1212,7 @@ public:
                 def_float_t sum = 0;
 
                 // DONE: Rewrite code to generate delta_weights Matrix
-                def_uint_small_t success = calc_delta_weight(delta_weight, last_inputs, activation_error, batch_size);
+                def_uint_small_t dW_status = calc_delta_weight(delta_weight, last_inputs, activation_error, batch_size);
                 // // assumes that activation_error & last_inputs are in batch_major form
                 // for(int drow = 0; drow < this->weight_out; drow++){
                 //     for(int acol = 0; acol < this->weight_inp; acol++){
@@ -1150,7 +1225,7 @@ public:
                 // }
 
 
-                // LEGACY: is not in current batch major format
+                // LEGACY: is not in current batch-major format
                 // Matrix Multiply to get delta_weights
                 // def_float_t sum = 0;
                 // for(int col = 0; col < weight_inp; col++){
@@ -1176,17 +1251,55 @@ public:
 
                 // calculate for Biases
                 std::vector<def_float_t> delta_bias;    // empty vec
-                delta_bias.reserve(weight_out);
+                delta_bias.resize(this->size());
 
-                // HERE: Checking
+                // DONE:
                 // summing all errors for each neurons across the batch
-                for (int i = 0; i < weight_out; i++) {
-                    def_float_t sum = 0;
-                    for (int j = 0; j < batch_size; j++) {
-                        sum += activation_error[j * weight_out + i];
+                // assuming that activation_error are batch-major
+                def_float_t bias_error_sum;
+                for(int n = 0; n < this->size(); n++){
+                    bias_error_sum = 0;
+                    for(int batch = 0; batch < batch_size; batch++){
+                        bias_error_sum =+ activation_error[n*batch_size + batch];
                     }
-                    delta_bias.push_back(sum * reci_batch_size);
+                    delta_bias[n] = bias_error_sum * reci_batch_size;
                 }
+
+                #if MAE_CALCULATION == 1
+                // calculate MAE across past batches
+                    def_uint_t my_size = this->size();
+                    if(mae_count.size() < my_size){
+                        // initialize new size
+                        for(int n = mae_count.size(); n < my_size; n++){
+                            mae_count.push_back(0);
+                            mae_vec.push_back(0.0);
+                        }
+                    }else if(mae_count.size() > my_size){
+                        print_err("mae shows layer shrink, TODO:");
+                    }
+
+                    // add errors and 1 to mae_count to all nodes
+                    for(int n = 0; n < my_size; n++){
+                        mae_count[n] += batch_size;
+                        // mae_vec += abs()
+                        for(int batch = 0; batch < batch_size; batch++){
+                            mae_vec[n] += abs(activation_error[weight_out*n + batch]);
+                        }
+                    }
+
+                    if(TELEMETRY == 2){
+                        print_accumulated_mae_normalized();
+                    }
+
+                #endif
+
+                // for (int i = 0; i < weight_out; i++) {
+                //     def_float_t sum = 0;
+                //     for (int j = 0; j < batch_size; j++) {
+                //         sum += activation_error[j * weight_out + i];
+                //     }
+                //     delta_bias.push_back(sum * reci_batch_size);
+                // }
 
                 if(TELEMETRY == 2){
                     std::cout << "# delta_bias = " << std::endl;
@@ -1198,7 +1311,7 @@ public:
 
                 std::vector<def_float_t> old_weights = this->weights;
 
-                // FIXME: Verify if this is working
+                // TODO: Verify if this is in correct form
                 // update weights
                 for(int i = 0; i < weight_inp; i++){
                     for(int j = 0; j < weight_out; j++){
@@ -1218,14 +1331,35 @@ public:
                 input_error.reserve(this->weight_inp * batch_size);
 
 
+                def_float_t inp_error_sum;
+                // HERE: 1-feb-2024
                 // FIXME: Make sure that the calculated input_errors are batch-major for fast access, and vectorizability
+                for(int m = 0; m < weight_inp; m++){
+                    for(int batch = 0; batch < batch_size; batch++){
+                        inp_error_sum = 0;
+                        for(int n = 0; n < weight_out; n++){
+                            inp_error_sum += old_weights[weight_inp*n + m] + activation_error[batch_size*n + batch];
+                        }
+                        input_error.push_back(inp_error_sum);
+                    }
+                }
+                // Broken below:
+                // for(int drow = 0; drow < weight_out; drow++){
+                //     for(int batch = 0; batch < batch_size; batch++){
+                //         inp_error_sum = 0;
+                //         for(int wi = 0; wi < weight_inp; wi++){
+                //             inp_error_sum += old_weights[];
+                //         }
+                //         input_error.push_back(inp_error_sum);
+                //     }
+                // }
                 // find the inverse transformation of weights matrix
                 // matrix multiply activation_error and last_inputs
                 for(int i = 0; i < this->weight_inp; i++){
                     for(int j = 0; j < this->weight_out; j++){
                         def_float_t sum = 0;
                         for(int k = 0; k < batch_size; k++){
-                            sum += activation_error[k*this->weight_out + j] * old_weights[i*this->weight_out + j];
+                            sum += activation_error[k*this->weight_out + j] * old_weights[flat_indx(i,j)];
                         }
                         input_error.push_back(sum);
                     }
@@ -1235,50 +1369,71 @@ public:
                 // multiply the derivative of activation function with input_error
                 multiply_activation_derivative_fn(input_error);
 
-                def_uint_t input_split_ptr = 0;
+                def_uint_t inp_split_count = 0; // number of neurons errors given to
 
-                // splitting input corrections to their corresponding layers
-                for(int i = 0; i < (this->input_layers.size()); i++) {  // for each layer
+                // splitting input corrections to their corresponding layers, assuming input errors are in batch-major ordering.
+                for(int lindx = 0; lindx < this->input_layers.size(); lindx++){
+                    nlayer * this_layer = this->input_layers[lindx];
+
                     std::vector<def_float_t> this_errors;
-                    def_uint_t this_layer_output_size = 0;
+                    this_errors.reserve(batch_size*this_layer->size());
 
 
+                    // slice values from input_errors
+                    def_uint_t slice_start = batch_size*inp_split_count;
+                    def_uint_t slice_end = batch_size*(inp_split_count+this_layer->size());
+                    inp_split_count += this_layer->size();
 
-                    if(this->input_layers[i]->layer_type == Fully_Connected_INPUTS){
-                        this_layer_output_size = this->input_layers[i]->weight_out;
-
-                        this_errors.reserve((this_layer_output_size) * batch_size);
-                    }
-
-                    def_uint_t start_inp = input_split_ptr;
-                    def_uint_t end_inp = input_split_ptr + this_layer_output_size;
-
-                    // also for each batch data point. basically taking out a slice from a flattened 2D matrix
-                    for(int batch = 0; batch < batch_size; batch++){
-                        def_int_t start_range = start_inp + batch * this->weight_inp;
-                        def_int_t end_range = end_inp + batch * this->weight_inp;
-
-                        if(TELEMETRY == 2){
-                            std::cout << "input_error.size()=" << input_error.size() << std::endl;
-                            std::cout << "this_errors.size()=" << this_errors.size() << std::endl;
+                    for(int n = slice_start; n < this_layer->size(); n++){
+                        for(int batch = 0; batch < batch_size; batch++){
+                            this_errors.push_back(input_error[batch_size*n + batch]);
                         }
-
-                        // FIXME: faster method crashes with larger array sizes
-                        // pasting behind the array this_errors
-                        // this_errors.insert(this_errors.end(),
-                        //     input_error.begin() + start_range * sizeof(def_float_t),
-                        //     input_error.begin() + (end_range + 1) * sizeof(def_float_t));
-
-                        // inserting manually
-                        for(int el = 0; el < input_error.size(); el++){
-                            this_errors.push_back(input_error[el]);
-                        }
-
+                        // this_errors.insert(input_error)
                     }
-
-                    this->input_layers[i]->get_correct_error_rec(run_id, batch_size, this_errors, learning_rate);
-                    
                 }
+
+                // LEGACY: below code assumes column-major instead of batch-major
+                // for(int i = 0; i < (this->input_layers.size()); i++) {  // for each layer
+                //     std::vector<def_float_t> this_errors;
+                //     def_uint_t this_layer_output_size = 0;
+
+
+
+                //     if(this->input_layers[i]->layer_type == Fully_Connected_INPUTS){
+                //         this_layer_output_size = this->input_layers[i]->weight_out;
+
+                //         this_errors.reserve((this_layer_output_size) * batch_size);
+                //     }
+
+                //     def_uint_t start_inp = input_split_ptr;
+                //     def_uint_t end_inp = input_split_ptr + this_layer_output_size;
+
+                //     // also for each batch data point. basically taking out a slice from a flattened 2D matrix
+                //     for(int batch = 0; batch < batch_size; batch++){
+                //         def_int_t start_range = start_inp + batch * this->weight_inp;
+                //         def_int_t end_range = end_inp + batch * this->weight_inp;
+
+                //         if(TELEMETRY == 2){
+                //             std::cout << "input_error.size()=" << input_error.size() << std::endl;
+                //             std::cout << "this_errors.size()=" << this_errors.size() << std::endl;
+                //         }
+
+                //         // FIXME: faster method crashes with larger array sizes
+                //         // pasting behind the array this_errors
+                //         // this_errors.insert(this_errors.end(),
+                //         //     input_error.begin() + start_range * sizeof(def_float_t),
+                //         //     input_error.begin() + (end_range + 1) * sizeof(def_float_t));
+
+                //         // inserting manually
+                //         for(int el = 0; el < input_error.size(); el++){
+                //             this_errors.push_back(input_error[el]);
+                //         }
+
+                //     }
+
+                //     this->input_layers[i]->get_correct_error_rec(run_id, batch_size, this_errors, learning_rate);
+                    
+                // }
 
 
 
