@@ -13,7 +13,8 @@
 #define pb push_back
 
 #define train_data_sample_limit 43000
-#define learning_rate_def 0.015625*8
+#define learning_rate_def 1.0/4.0
+// 0.015625
 
 #define epoch_count 1
 
@@ -21,9 +22,9 @@
 #define test_batch_size_def 1
 
 int main(){
-    nnetwork net(2,2);
+    nnetwork net(2,2,learning_rate_def);
 
-    net.output_layer->activationFn=ReLU;
+    net.output_layer->activationFn=LReLU;
     // net.output_layer->init_weight(1,1);
     net.output_layer->fix_weights();
 
@@ -31,7 +32,9 @@ int main(){
 
     std::cout << "net.output_layer->weights.size() = " << net.output_layer->weights.size() << std::endl;
 
-    net.add_new_layer_at_last(3,ReLU,learning_rate_def);
+    net.output_layer->is_dynamic_layer = 0; // should be 1
+    // net.add_new_layer_at_last(2,LReLU,learning_rate_def);
+    // net.output_layer->is_dynamic_layer = 0;
 
     // nlayer newl(3,ReLU,0.05);
     // newl.id=4;
@@ -54,20 +57,58 @@ int main(){
     //     net.add_new_layer_at_last(2,ReLU,learning_rate_def);
     // }
 
-    vector<def_float_t> input = {1,2};
-    vector<def_float_t> output = {1,2};
+    vector<def_float_t> input = {1,5,5,1};
+    vector<def_float_t> output = {0,1,1,0};
+    vector<def_float_t> expected_output = {1,5,5,1};
 
-    output = net.forward_prop(input,1);
+    // output = net.forward_prop(input,2);
 
-    std::cout << "output before learning =" << output[0] << "," << output[1] << std::endl;
+    // // give solution and check for errors
+    // std::vector<def_float_t> new_weight = {1.0,0,0,0,1.0,0};
+    // std::vector<def_float_t> new_bias = {0,0};
+    // net.output_layer->weights = new_weight;
+    // net.output_layer->bias = new_bias;
+    // net.output_layer->input_layers[0]->weights = new_weight;
+    // net.output_layer->input_layers[0]->bias = new_bias;
 
-    for(int i = 0; i < 10; i++){
-        net.backward_prop(input,output, 1);
+    // give close solution and check divergence or convergence
+    // std::vector<def_float_t> new_weight = {1.0,0,0,0,1.0,0};
+    std::vector<def_float_t> new_weight = {0.99,0,0,0,0.99,0};
+    std::vector<def_float_t> new_bias = {0,0};
+    net.output_layer->weights = new_weight;
+    net.output_layer->bias = new_bias;
+    // net.output_layer->input_layers[0]->weights = new_weight;
+    // net.output_layer->input_layers[0]->bias = new_bias;
+
+    std::cout << "run_id =" << net.get_run_id() << std::endl;
+    std::cout << "output before learning =" << std::endl;
+    fori(i, output.size()){
+        std::cout << output[i] << " ";
+    }
+    std::cout << std::endl;
+
+
+    for(int i = 0; i < 4; i++){
+        std::cout << "run_id = " << net.get_run_id() << std::endl;
+        net.output_layer->print_weights();
+        net.backward_prop(input,expected_output, 2);
+
+        std::cout << std::endl;
+        std::cout << std::endl;
+        std::cout << "#### Printing output layer weights" << std::endl;
+        net.output_layer->print_weights();
+        std::cout << std::endl;
+        std::cout << std::endl;
     }
 
-    output = net.forward_prop(input,1);
+    output = net.forward_prop(input,2);
+    std::cout << "run_id =" << net.get_run_id() << std::endl;
 
-    std::cout << "output after learning =" << output[0] << "," << output[1] << std::endl;
+    std::cout << "output after learning =" << std::endl;
+    fori(i, output.size()){
+        std::cout << output[i] << " ";
+    }
+    std::cout << std::endl;
 
     // std::cout << "Network created" << std::endl;
 

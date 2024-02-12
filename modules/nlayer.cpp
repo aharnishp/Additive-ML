@@ -12,6 +12,10 @@
 #endif
 
 #define MAE_CALCULATION 1
+#define MAE_Split_Min_training 50
+
+#define TELE_PROP 1
+
 
 
 // #define fori(i,n) for(int i = 0; i < n; i++)
@@ -162,7 +166,7 @@ public:
     def_int_t cached_run_id = 0;
     def_uint_t cached_batch_size = 1;    // store the batch size of the input
 
-    // FIXME:
+    // FIXME: 
     // stores the value of last activation
     // if a convolutional layer, then cached values would be 3D,
     // if a normal layer, then cached values would be 2D flattened to 1D, it would be column major and of size layer.size() * batch_size with adjacent neurons adjacent in single batch
@@ -185,6 +189,11 @@ public:
     #if MAE_CALCULATION == 1
         std::vector<def_float_t> mae_vec;  // stores the absolute errors accumulated at each node
         std::vector<def_uint_t> mae_count;
+        def_float_t max_inp_activ = 0;      // store the max input activation ever given, to normalize layer with activation
+
+        // splitting conditions
+        def_float_t mae_threshold = 0.5;
+
     #endif
 
 
@@ -435,9 +444,9 @@ public:
             }else if(this->activationFn == LReLU){
                 for(int i = 0; i < input_vector.size(); i++){
                     if(input_vector[i] < 0){
-                        input_vector[i] = leaky_relu_slope;
+                        input_vector[i] *= leaky_relu_slope;
                     }else{
-                        input_vector[i] = 1;
+                        input_vector[i] *= 1;
                     }
                 }
             }else if(this->activationFn == ReLU){
@@ -529,6 +538,8 @@ public:
     */
     def_uint_t fix_weights(def_uint_t new_weight_inp = 0, def_uint_t new_weight_out = 0){
         def_uint_small_t random_weight_init = 1;
+        def_uint_t seed1 = 1;
+
 
         if(this->layer_type == Fully_Connected_INPUTS){
             // calculate the size of expected layer's inputs and outputs, and resize weights matrix with reserve
@@ -541,7 +552,7 @@ public:
                 new_weight_out = this->size();
             }
 
-            if(TELEMETRY){
+            if(TELEMETRY==2){
                 std::cout << "fix_weights for id=" << this->id << std::endl;
             }
 
@@ -560,7 +571,7 @@ public:
                 bias.resize(new_weight_out);
                 if(random_weight_init){
                     for(int n = old_bias_size; n < new_weight_out; n++){
-                        bias[n] = get_rand_float();
+                        bias[n] = get_rand_float_seeded(seed1++);
                     }
                 }else{
                     for(int n = old_bias_size; n < new_weight_out; n++){
@@ -598,7 +609,7 @@ public:
                     // if random weight init, then initialize the new weights
                     for(int i = 0; i < this->weight_out; i++){
                         for(int j = old_weight_inp; j < this->weight_inp; j++){
-                            this->weights[flat_indx(j, i)] = get_rand_float();
+                            this->weights[flat_indx(j, i)] = get_rand_float_seeded(seed1++);
                         }
                     }
                 }
@@ -630,7 +641,7 @@ public:
                     // if random weight init, then initialize the new weights
                     for(int i = old_weight_out_allocated; i < this->weight_out; i++){
                         for(int j = 0; j < this->weight_inp; j++){
-                            this->weights[flat_indx(j, i)] = get_rand_float();
+                            this->weights[flat_indx(j, i)] = get_rand_float_seeded(seed1++);
                         }
                     }
                 }
@@ -641,7 +652,6 @@ public:
         // std::cout << "Weights fixed!" << std::endl;
 
         return 0;
-
     }
 
     /**
@@ -869,6 +879,46 @@ public:
         }
     }
 
+    /**
+     * @brief a function to change neural network density as needed based on errors in current layer
+    */
+    def_int_t adjust_arch(){
+        #if MAE_CALCULATION == 1
+            if(this->is_dynamic_layer){
+                // find the node with most error
+                def_float_t error_nodes = 0;
+                for(int indx = 0; indx < mae_count.size(); indx++){
+                    if(max_inp_activ == 0){
+                        max_inp_activ = 0.1;
+                    }
+                    def_float_t this_err = (mae_vec[indx]/mae_count[indx])/max_inp_activ;
+                    // count the number of nodes with error more than threshold
+                    if(this_err > mae_threshold && mae_count[indx] > MAE_Split_Min_training){
+                        error_nodes++;
+                        // half the current error values to not cross next run
+                        mae_vec[indx] *= 0.5;
+                    }
+                }
+                // increase the number of neurons in current layer
+                if(this->layer_type == Fully_Connected_INPUTS){
+                    if(y == 1 && z == 1){
+                        if(error_nodes > 0){
+                            if(TELEMETRY){
+                                std::cout << "layer id=" << this->id << " resizing from " << this->size() << " to " << this->size() + error_nodes << std::endl;
+                            }
+                        }
+                        this->x += error_nodes;
+                        fix_weights();
+                    }else{
+                        print_err("cannot add neurons, as layer id=" << this->id << "is 2D (x,y,z)=("<<x<<","<<y<<","<<z<<"). Error nodes = " << error_nodes );
+                    }
+                }
+                return error_nodes;
+            }
+            return 0;
+        #endif
+    }
+
 
     /**
      * @brief returns activation values of this layer's neurons.
@@ -892,6 +942,9 @@ public:
         }
 
         this->being_evaluated = 1;  // lock flag and prevent cyclic evaluations.
+
+        
+
 
         if(this->layer_type == Fully_Connected_INPUTS){
             if(weight_inp == 0 || weight_out == 0){
@@ -1025,6 +1078,18 @@ public:
                 this->cached_activation_values = output_vector;  // confirmed: creates copy
                 this->cached_batch_size = batch_size;
 
+                #if TELE_PROP==1
+                    std::cout << "FORWARD ACTIVATIONS of id=" << this->id << "  weight_out=" << this->weight_out << "  batch_size=" << batch_size << "  activations(row-major):" << std::endl;
+                    // if(cached_activation_values.size() > 10){}
+                    for(int i = 0; (i < cached_activation_values.size() && i < 12); i++){
+                        std::cout << cached_activation_values[i] << "  ";
+                    }
+                    if(cached_activation_values.size() >= 12){
+                        std::cout << "....";
+                    }
+                    std::cout << std::endl;
+                #endif
+
                 if(TELEMETRY == 2){
                     std::cout << "Input Values" << std::endl;
                     for(int i = 0; i < input_activations.size(); i++){
@@ -1073,7 +1138,7 @@ public:
 
 
     /**
-     * @breif retrieve previous activations from corresponding input layers as  batch-major
+     * @breif retrieve previous activations from corresponding input layers as batch-major
      * @param collected_vec reference to empty output vec batch-major flattened vec
      * @param batch_size uint of number of batches
     */
@@ -1095,6 +1160,14 @@ public:
         return 0;
     }
 
+
+    /**
+     * @brief generate delta_weights in row-major form (same as weights) but without reserved spaces
+     * @param delta_weights address of vec to store delta_weights
+     * @param last_inputs address of vec with last_input values as batch-major
+     * @param error_diff address of vec with error_diff values as batch-major
+     * @param batch_size number of batches
+    */
     def_uint_small_t calc_delta_weight(std::vector<def_float_t> &delta_weights, std::vector<def_float_t> &last_input, std::vector<def_float_t> &error_diff, def_uint_t batch_size){
         def_float_t sum = 0;
         // assuming error_diff and last-inputs as batch-major 
@@ -1144,6 +1217,17 @@ public:
             return std::vector<def_float_t>(0,0);
         }
 
+        #if TELE_PROP == 1
+            std::cout << "BACKWARD PROPAGATION of id=" << this->id << "  weight_out=" << this->weight_out << "  batch_size=" << batch_size << "  errors(batch-major):" << std::endl;
+            for(int i = 0; (i < activation_error.size() && i < 12); i++){
+                std::cout << activation_error[i] << "  ";
+            }
+            if(activation_error.size() >= 12){
+                std::cout << "....";
+            }
+            std::cout << std::endl;
+        #endif
+
         if(this->layer_type == Fully_Connected_INPUTS){
             // check if forward prop caches errors are fresh, otherwise, wrong errors will be calculated.
             if(this->cached_run_id < run_id){
@@ -1173,7 +1257,7 @@ public:
                 // notation: A_l_-1
                 // generate a list of last inputs
                 std::vector<def_float_t> last_inputs;   // A_l_-1
-                last_inputs.resize(this->weight_inp * batch_size);
+                last_inputs.reserve(this->weight_inp * batch_size);
                 
                 this->being_evaluated = 1;
 
@@ -1265,33 +1349,7 @@ public:
                     delta_bias[n] = bias_error_sum * reci_batch_size;
                 }
 
-                #if MAE_CALCULATION == 1
-                // calculate MAE across past batches
-                    def_uint_t my_size = this->size();
-                    if(mae_count.size() < my_size){
-                        // initialize new size
-                        for(int n = mae_count.size(); n < my_size; n++){
-                            mae_count.push_back(0);
-                            mae_vec.push_back(0.0);
-                        }
-                    }else if(mae_count.size() > my_size){
-                        print_err("mae shows layer shrink, TODO:");
-                    }
-
-                    // add errors and 1 to mae_count to all nodes
-                    for(int n = 0; n < my_size; n++){
-                        mae_count[n] += batch_size;
-                        // mae_vec += abs()
-                        for(int batch = 0; batch < batch_size; batch++){
-                            mae_vec[n] += abs(activation_error[weight_out*n + batch]);
-                        }
-                    }
-
-                    if(TELEMETRY == 2){
-                        print_accumulated_mae_normalized();
-                    }
-
-                #endif
+                
 
                 // for (int i = 0; i < weight_out; i++) {
                 //     def_float_t sum = 0;
@@ -1338,7 +1396,7 @@ public:
                     for(int batch = 0; batch < batch_size; batch++){
                         inp_error_sum = 0;
                         for(int n = 0; n < weight_out; n++){
-                            inp_error_sum += old_weights[weight_inp*n + m] + activation_error[batch_size*n + batch];
+                            inp_error_sum += old_weights[weight_inp_allocated*n + m] * activation_error[batch_size*n + batch];
                         }
                         input_error.push_back(inp_error_sum);
                     }
@@ -1355,16 +1413,48 @@ public:
                 // }
                 // find the inverse transformation of weights matrix
                 // matrix multiply activation_error and last_inputs
-                for(int i = 0; i < this->weight_inp; i++){
-                    for(int j = 0; j < this->weight_out; j++){
-                        def_float_t sum = 0;
-                        for(int k = 0; k < batch_size; k++){
-                            sum += activation_error[k*this->weight_out + j] * old_weights[flat_indx(i,j)];
+                // for(int i = 0; i < this->weight_inp; i++){
+                //     for(int j = 0; j < this->weight_out; j++){
+                //         def_float_t sum = 0;
+                //         for(int k = 0; k < batch_size; k++){
+                //             sum += activation_error[k*this->weight_out + j] * old_weights[flat_indx(i,j)];
+                //         }
+                //         input_error.push_back(sum);
+                //     }
+                // }
+                #if MAE_CALCULATION == 1
+                // calculate MAE across past batches
+                    def_uint_t my_size = this->size();
+                    if(mae_count.size() < my_size){
+                        // initialize new size
+                        for(int n = mae_count.size(); n < my_size; n++){
+                            mae_count.push_back(0);
+                            mae_vec.push_back(0.0);
                         }
-                        input_error.push_back(sum);
+                    }else if(mae_count.size() > my_size){
+                        print_err("mae shows layer shrink, TODO: ");
                     }
-                }
+                    // NOTE: Bottleneck 
+                    for(int n = 0; n < last_inputs.size(); n++){
+                        if(last_inputs[n] > max_inp_activ){
+                            max_inp_activ= last_inputs[n];
+                        }
+                    }
 
+                    // add errors and 1 to mae_count to all nodes
+                    for(int n = 0; n < my_size; n++){   // nth 
+                        mae_count[n] += batch_size;
+                        // mae_vec += abs()
+                        for(int batch = 0; batch < batch_size; batch++){
+                            mae_vec[n] += abs(activation_error[batch_size*n + batch]);
+                        }
+                    }
+
+                    if(TELEMETRY == 2){
+                        print_accumulated_mae_normalized();
+                    }
+
+                #endif
 
                 // multiply the derivative of activation function with input_error
                 multiply_activation_derivative_fn(input_error);
@@ -1389,8 +1479,12 @@ public:
                             this_errors.push_back(input_error[batch_size*n + batch]);
                         }
                         // this_errors.insert(input_error)
+
                     }
+                    this->input_layers[lindx]->get_correct_error_rec(run_id, batch_size, this_errors, learning_rate);
                 }
+
+                this->adjust_arch();
 
                 // LEGACY: below code assumes column-major instead of batch-major
                 // for(int i = 0; i < (this->input_layers.size()); i++) {  // for each layer

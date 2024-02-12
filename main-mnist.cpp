@@ -17,8 +17,8 @@
 
 #define epoch_count 1
 
-#define train_batch_size_def 1
-#define test_batch_size_def 1
+#define train_batch_size_def 16
+#define test_batch_size_def 16
 
 
 void print1D(std::vector<def_float_t> vec){
@@ -97,6 +97,8 @@ int main(){
     nnetwork mnist1(784, 10, learning_rate_def);
     mnist1.output_layer->activationFn=Softmax;
     mnist1.add_layer_between_output(128,LReLU,learning_rate_def);
+    mnist1.output_layer->is_dynamic_layer=0;
+    mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
     // mnist1.add_layer_between_output(64,LReLU,learning_rate_def);
 
     // output layer has its output as input

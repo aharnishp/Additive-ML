@@ -1,0 +1,1 @@
+g++ main-mnist.cpp -o build/main-mnist -O3 -march=native -mavx && time build/main-mnist

@@ -18,6 +18,7 @@
 // #define def_float_t double
 
 
+
 using namespace std;
 class nnetwork{
     private:
@@ -249,6 +250,8 @@ class nnetwork{
         next_assigning_id = 2;
 
         input_layer->is_input_layer = 1;
+        input_layer->is_dynamic_layer = 0;
+        output_layer->is_dynamic_layer = 0;
         output_layer->add_input_layer(input_layer);
         // output_layer->init_weight(1);
     }
@@ -264,6 +267,8 @@ class nnetwork{
         
 
         input_layer->is_input_layer = 1;
+        input_layer->is_dynamic_layer = 0;
+        output_layer->is_dynamic_layer = 0;
         output_layer->add_input_layer(input_layer);
         // output_layer->init_weight(1);
     }
@@ -271,6 +276,8 @@ class nnetwork{
     nnetwork(nlayer *input_layer, nlayer *output_layer){
         this->input_layer = input_layer;
         this->output_layer = output_layer;
+        input_layer->is_dynamic_layer = 0;
+        output_layer->is_dynamic_layer = 0;
     }
 
 
@@ -310,10 +317,7 @@ class nnetwork{
      * @param learning_rate learning rate of the new layer
     */
     def_uint_small_t add_new_layer_at_last(def_uint_t layer_size, activation_fn_t activation_function, def_float_t learning_rate){
-        /*
-        adds a new layer at the end of the network.
-        returns the id of the newly added layer.
-        */
+        // NOTE: This function needs to be DEPRECATED soon.
         nlayer *new_layer = new nlayer(layer_size, activation_function, learning_rate);
         
         new_layer->id = next_assigning_id;
@@ -389,7 +393,7 @@ class nnetwork{
      * @param expected_values flattened 1D vector of the 2D array formed by output_layer.size * batch_size
      * @param batch_size
     */
-    std::vector<def_float_t> backward_prop(std::vector<def_float_t>& input_values, std::vector<def_float_t>& expected_values, def_uint_t batch_size) {
+    std::vector<def_float_t> backward_prop(std::vector<def_float_t>& input_values, std::vector<def_float_t>& expected_values, def_uint_t batch_size, def_uint_small_t is_batch_major = 0) {
 
         run_id++;
         this->input_layer->cached_activation_values = input_values;
@@ -425,10 +429,26 @@ class nnetwork{
         // std::transform(this->output_layer->cached_activation_values.begin(), this->output_layer->cached_activation_values.end(), expected_values.begin(), std::back_inserter(error_in_prediction), std::minus<def_float_t>());
 
         // FIXME: Make sure the calculations are batch-major (errors across multiple batches are contiguous per neuron)
-        for(int i = 0; i < expected_values.size(); i++){
-            error_in_prediction.push_back(this->output_layer->cached_activation_values[i] - expected_values[i]);
-            // error_in_prediction.push_back(expected_values[i] - this->output_layer->cached_activation_values[i]);
+        if(is_batch_major==0){
+            // the cached activation values and expected_values would be in column major, but error_in_predictions must be batch_major
+            
+            def_uint_t output_size = expected_values.size()/batch_size;
+
+            // collect error of neurons across all batches
+            for(int n = 0; n < output_size; n++){
+                for(int batch = 0; batch < batch_size; batch++){
+                    error_in_prediction.push_back(expected_values[output_size*batch + n] - this->output_layer->cached_activation_values[output_size*batch + n]);
+                }
+            }
+        }else{
+            // TODO: Add support for direct batch-major expected_values
+            print_err("Direct batch-major not supported");
+            return error_in_prediction;
         }
+        // for(int i = 0; i < expected_values.size(); i++){
+        //     error_in_prediction.push_back(this->output_layer->cached_activation_values[i] - expected_values[i]);
+        //     // error_in_prediction.push_back(expected_values[i] - this->output_layer->cached_activation_values[i]);
+        // }
         
         // print error_in_prediction
         if(TELEMETRY == 2){
