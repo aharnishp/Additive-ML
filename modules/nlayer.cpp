@@ -1340,11 +1340,11 @@ public:
                 // DONE:
                 // summing all errors for each neurons across the batch
                 // assuming that activation_error are batch-major
-                def_float_t bias_error_sum;
+
                 for(int n = 0; n < this->size(); n++){
-                    bias_error_sum = 0;
+                    def_float_t bias_error_sum = 0;
                     for(int batch = 0; batch < batch_size; batch++){
-                        bias_error_sum =+ activation_error[n*batch_size + batch];
+                        bias_error_sum += activation_error[n*batch_size + batch];
                     }
                     delta_bias[n] = bias_error_sum * reci_batch_size;
                 }
@@ -1373,7 +1373,7 @@ public:
                 // update weights
                 for(int i = 0; i < weight_inp; i++){
                     for(int j = 0; j < weight_out; j++){
-                        this->weights[ flat_indx(i,j) ] -= (delta_weight[ weight_inp * j + i ] * learning_rate);
+                        this->weights[ flat_indx(i,j) ] += (delta_weight[ weight_inp * j + i ] * learning_rate);
                     }
                 }
 

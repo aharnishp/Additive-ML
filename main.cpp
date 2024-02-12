@@ -13,7 +13,7 @@
 #define pb push_back
 
 #define train_data_sample_limit 43000
-#define learning_rate_def 1.0/4.0
+#define learning_rate_def 1.0/2048.0
 // 0.015625
 
 #define epoch_count 1
@@ -33,8 +33,19 @@ int main(){
     std::cout << "net.output_layer->weights.size() = " << net.output_layer->weights.size() << std::endl;
 
     net.output_layer->is_dynamic_layer = 0; // should be 1
-    // net.add_new_layer_at_last(2,LReLU,learning_rate_def);
-    // net.output_layer->is_dynamic_layer = 0;
+    
+    net.add_new_layer_at_last(2,LReLU,learning_rate_def);
+    net.output_layer->is_dynamic_layer = 0;
+
+    
+    net.add_new_layer_at_last(2,LReLU,learning_rate_def);
+    net.output_layer->is_dynamic_layer = 0;
+
+
+    net.add_new_layer_at_last(2,LReLU,learning_rate_def);
+    net.output_layer->is_dynamic_layer = 0;
+
+
 
     // nlayer newl(3,ReLU,0.05);
     // newl.id=4;
@@ -73,10 +84,10 @@ int main(){
 
     // give close solution and check divergence or convergence
     // std::vector<def_float_t> new_weight = {1.0,0,0,0,1.0,0};
-    std::vector<def_float_t> new_weight = {0.99,0,0,0,0.99,0};
-    std::vector<def_float_t> new_bias = {0,0};
-    net.output_layer->weights = new_weight;
-    net.output_layer->bias = new_bias;
+    // std::vector<def_float_t> new_weight = {0.99,0,0,0,0.99,0};
+    // std::vector<def_float_t> new_bias = {0,0};
+    // net.output_layer->weights = new_weight;
+    // net.output_layer->bias = new_bias;
     // net.output_layer->input_layers[0]->weights = new_weight;
     // net.output_layer->input_layers[0]->bias = new_bias;
 
@@ -88,7 +99,7 @@ int main(){
     std::cout << std::endl;
 
 
-    for(int i = 0; i < 4; i++){
+    for(int i = 0; i < 1600; i++){
         std::cout << "run_id = " << net.get_run_id() << std::endl;
         net.output_layer->print_weights();
         net.backward_prop(input,expected_output, 2);
