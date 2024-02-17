@@ -12,9 +12,8 @@
 #endif
 
 #define MAE_CALCULATION 1
-#define MAE_Split_Min_training 50
+#define MAE_Split_Min_training 10
 
-#define TELE_PROP 1
 
 
 
@@ -22,7 +21,7 @@
 // #define pb push_back
 
 //// Compile Time Parameters 
-#define Low_Memory_Target 0
+#define Low_Memory_Target 1
 
 #define weight_row_major 1
 
@@ -60,6 +59,8 @@ typedef enum {
 
 
 // Settings
+#define TELE_PROP 1
+
 #define TELEMETRY 1     // 0 is no string, 1 is only errors, 2 is full telemetry
 #define DEFAULT_LAYER_VERSION 1
 #define INITIAL_LEARNING_RATE 0.05
@@ -277,6 +278,71 @@ public:
     //     }
     // }
 
+    def_float_t get_rand_gaussian(def_uint_t seed){
+        static bool generate_cached = false;
+        static def_float_t cached_value;
+
+        if (generate_cached) {
+            generate_cached = false;
+            return cached_value;
+        } else {
+            def_float_t u1 = get_rand_float_seeded(seed);
+            def_float_t u2 = get_rand_float_seeded(seed+1);
+
+            def_float_t z0 = std::sqrt(-2.0 * std::log(u1)) * std::cos(2.0 * M_PI * u2);
+            def_float_t z1 = std::sqrt(-2.0 * std::log(u1)) * std::sin(2.0 * M_PI * u2);
+
+            // Cache one of the values for the next call
+            cached_value = z1;
+            generate_cached = true;
+
+            return z0;
+        }
+    }
+
+
+    /**
+     * @breif fills values according to current weight in and out through random, He, or Xavier Initialization methods
+     * @param inp_vec address of the vector to fill values to
+     * @param end_fill_indx number of values to append
+     * @param num_inp final expected number of inputs
+     * @param num_out final expected number of outputs
+     * @param init_method 0 = Random from 0 to 1, 1 = Xavier, 2 = He Initialization
+    */
+    def_uint_small_t fill_weight_value_initialization(std::vector<def_float_t>& inp_vec, def_uint_t start_fill_indx, def_uint_t end_fill_indx, def_uint_t num_inp, def_uint_t num_out, def_uint_small_t init_method){
+        if(this->layer_type == Fully_Connected_INPUTS){
+            if((num_inp == 0 || num_out == 0) || (start_fill_indx > end_fill_indx)){
+                print_err("Error: fill_weight_value_initialization-> one of the dimension is 0 or start_fill_indx > end_fill_indx.");
+                return 1;
+            }
+            def_uint_t seed = time(0);
+            if(init_method == 0){
+                for(int i = start_fill_indx; i < end_fill_indx; i++){
+                    inp_vec[i] = (get_rand_float());
+                }
+            }else if(init_method == 1){     // Xavier Initialization
+                float xavier_variance = 1.0 / (num_inp + num_out);
+                float xavier_stddev = std::sqrt(xavier_variance);
+
+                for (int i = start_fill_indx; i < end_fill_indx; i++) {
+                    inp_vec[i] = (get_rand_gaussian(seed++) * xavier_stddev);
+                }
+
+            }else if(init_method == 2){     // He Initialization
+                float he_variance = 2.0 / (num_inp);
+                float he_stddev = std::sqrt(he_variance);
+
+                for (int i = start_fill_indx; i < end_fill_indx; i++) {
+                    inp_vec[i] = (get_rand_gaussian(seed++) * he_stddev);
+                }
+            }
+
+            return 0;
+        }else{
+            return 1;
+        }
+
+    }
 
     /**
      * @breif initialize the weight matrix of size weight_inp * weight_out with random values.
@@ -285,6 +351,8 @@ public:
     */
     def_uint_small_t init_weight(def_uint_small_t random_values, def_uint_small_t reserve) {
         if(this->layer_type == Fully_Connected_INPUTS){
+            std::cout << "DEPRECATED: init weight was called, id=" << this->id << std::endl;
+
             this->weights.clear();
             // this->weights.resize(weight_inp * weight_out);
 
@@ -607,11 +675,28 @@ public:
                 }
                 if(random_weight_init){
                     // if random weight init, then initialize the new weights
-                    for(int i = 0; i < this->weight_out; i++){
-                        for(int j = old_weight_inp; j < this->weight_inp; j++){
-                            this->weights[flat_indx(j, i)] = get_rand_float_seeded(seed1++);
+
+                    def_uint_small_t init_method = 0;
+                    if(this->activationFn == Sigmoid || this->activationFn == Exponential){
+                        init_method = 1;
+                    }else if(this->activationFn == ReLU || this->activationFn == LReLU){
+                        init_method = 2;
+                    }
+
+                    if(fill_weight_value_initialization(this->weights, flat_indx(old_weight_inp, 0), flat_indx(this->weight_inp, this->weight_out), old_weight_inp, this->weight_out, init_method)){
+                        // LEGACY: was uniform initialization below
+                        for(int i = 0; i < this->weight_out; i++){
+                            for(int j = old_weight_inp; j < this->weight_inp; j++){
+                                this->weights[flat_indx(j, i)] = get_rand_float_seeded(seed1++);
+                            }
                         }
                     }
+
+                    // for(int i = 0; i < this->weight_out; i++){
+                    //     for(int j = old_weight_inp; j < this->weight_inp; j++){
+                    //         this->weights[flat_indx(j, i)] = get_rand_float_seeded(seed1++);
+                    //     }
+                    // }
                 }
             }else if(new_weight_inp > this->weight_inp){ // this is when weight_out is 0, but just for safety
                 this->weight_inp = new_weight_inp;
@@ -633,17 +718,29 @@ public:
                     // if not allocated, then allocate more
                     def_uint_t old_weight_out_allocated = this->weight_out_allocated;
                     this->weight_out_allocated = get_default_reserve_size(new_weight_out);
+                    
                     this->weights.resize(this->weight_inp_allocated * this->weight_out_allocated);
 
                     this->weight_out = new_weight_out;
                 }
                 if(random_weight_init){
                     // if random weight init, then initialize the new weights
-                    for(int i = old_weight_out_allocated; i < this->weight_out; i++){
-                        for(int j = 0; j < this->weight_inp; j++){
-                            this->weights[flat_indx(j, i)] = get_rand_float_seeded(seed1++);
+                    def_uint_small_t init_method = 0;
+                    if(this->activationFn == Sigmoid || this->activationFn == Exponential){
+                        init_method = 1;
+                    }else if(this->activationFn == ReLU || this->activationFn == LReLU){
+                        init_method = 2;
+                    }
+
+                    if(fill_weight_value_initialization(this->weights, old_weight_out_allocated * this->weight_inp_allocated, this->weight_out_allocated * this->weight_inp_allocated, this->weight_inp, this->weight_out, init_method)){
+                        // LEGACY: was uniform initialization below
+                        for(int i = old_weight_out_allocated; i < this->weight_out; i++){
+                            for(int j = 0; j < this->weight_inp; j++){
+                                this->weights[flat_indx(j, i)] = get_rand_float_seeded(seed1++);
+                            }
                         }
                     }
+
                 }
             }
     
