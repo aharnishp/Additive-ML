@@ -13,6 +13,7 @@
 
 #define MAE_CALCULATION 1
 #define MAE_Split_Min_training 10
+#define DEF_MAE_THRESHOLD 0.1
 
 
 
@@ -193,7 +194,7 @@ public:
         def_float_t max_inp_activ = 0;      // store the max input activation ever given, to normalize layer with activation
 
         // splitting conditions
-        def_float_t mae_threshold = 0.5;
+        def_float_t mae_threshold = DEF_MAE_THRESHOLD;
 
     #endif
 
@@ -1466,18 +1467,47 @@ public:
 
                 std::vector<def_float_t> old_weights = this->weights;
 
-                // TODO: Verify if this is in correct form
-                // update weights
-                for(int i = 0; i < weight_inp; i++){
-                    for(int j = 0; j < weight_out; j++){
-                        this->weights[ flat_indx(i,j) ] += (delta_weight[ weight_inp * j + i ] * learning_rate);
-                    }
-                }
 
-                // // update bias
-                for(int i = 0; i < weight_out; i++){
-                    this->bias[i] -= delta_bias[i] * learning_rate;
-                }
+                #if MAE_CALCULATION == 1
+                    std::vector<def_float_t> reci_node_age(1,this->size());
+
+                    if(mae_count.size() == this->size()){
+                        for(int n = 0; n < mae_count.size(); n++){
+                            if(mae_count[n] != 0){
+                                reci_node_age[n] = 1.0/mae_count[n];
+                            }else{
+                                reci_node_age[n] = 1;
+                            }
+                        }
+                    }else{
+                        print_err("warning!")
+                    }
+
+                    // DONE: Verify if this is in correct form
+                    // update weights
+                    for(int i = 0; i < weight_inp; i++){
+                        for(int j = 0; j < weight_out; j++){
+                            this->weights[ flat_indx(i,j) ] += (delta_weight[ weight_inp * j + i ] * learning_rate * reci_node_age[j]);
+                        }
+                    }
+
+                    // // update bias
+                    for(int i = 0; i < weight_out; i++){
+                        this->bias[i] -= delta_bias[i] * learning_rate * reci_node_age[i];
+                    }
+                #else
+                    // update weights
+                    for(int i = 0; i < weight_inp; i++){
+                        for(int j = 0; j < weight_out; j++){
+                            this->weights[ flat_indx(i,j) ] += (delta_weight[ weight_inp * j + i ] * learning_rate);
+                        }
+                    }
+
+                    // // update bias
+                    for(int i = 0; i < weight_out; i++){
+                        this->bias[i] -= delta_bias[i] * learning_rate;
+                    }
+                #endif
 
                 // input_dz = (W.T x dZ) * g'(Z)
 
@@ -1487,7 +1517,6 @@ public:
 
 
                 def_float_t inp_error_sum;
-                // HERE: 1-feb-2024
                 // FIXME: Make sure that the calculated input_errors are batch-major for fast access, and vectorizability
                 for(int m = 0; m < weight_inp; m++){
                     for(int batch = 0; batch < batch_size; batch++){

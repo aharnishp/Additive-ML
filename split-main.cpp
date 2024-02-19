@@ -13,8 +13,8 @@
 #define pb push_back
 
 
-#define train_batch_size_def 8
-#define test_batch_size_def 8
+#define train_batch_size_def 16
+#define test_batch_size_def 1
 
 // FIXME: this is for testing only
 #define train_lines_limit 42000 // 11000
@@ -115,9 +115,13 @@ def_int_t get_max_class(std::vector<def_float_t> vec){
 int main(){
     nnetwork mna(784,7,learning_rate);
     mna.add_layer_between_output(mnist_a_b_hidden_size,LReLU,learning_rate);
+    mna.output_layer->is_dynamic_layer = 0;
+    mna.output_layer->input_layers[0]->is_dynamic_layer = 0;
 
     nnetwork mnb(784,7,learning_rate);
     mnb.add_layer_between_output(mnist_a_b_hidden_size,LReLU,learning_rate);
+    mnb.output_layer->is_dynamic_layer = 0;
+    mnb.output_layer->input_layers[0]->is_dynamic_layer = 0;
 
     std::cout << "### ARCHITECTURE ###" << std::endl;
     print_architecture(mna);
@@ -192,8 +196,8 @@ int main(){
                     std::cout << "training_batch.size() = " << training_batch.size() << std::endl;
                 }
                 // train the networks
-                mna.backward_prop(training_batch, labelsA, train_line_count);
-                mnb.backward_prop(training_batch, labelsB, train_line_count);
+                mna.backward_prop(training_batch, labelsA, train_line_count, 0);
+                mnb.backward_prop(training_batch, labelsB, train_line_count, 0);
 
                 // reset the training batchs
                 training_batch.clear(); labelsA.clear(); labelsB.clear();
