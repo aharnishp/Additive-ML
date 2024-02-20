@@ -12,10 +12,13 @@
 #endif
 
 #define MAE_CALCULATION 1
-#define MAE_Split_Min_training 10
+#define MAE_Split_Min_training 80
 #define DEF_MAE_THRESHOLD 0.1
 
-
+#if MAE_CALCULATION == 1
+    #define MAE_HISTORY 1
+    #define MAE_HISTORY_SIZE 4
+#endif
 
 
 // #define fori(i,n) for(int i = 0; i < n; i++)
@@ -60,9 +63,9 @@ typedef enum {
 
 
 // Settings
-#define TELE_PROP 1
+#define TELE_PROP 0
 
-#define TELEMETRY 1     // 0 is no string, 1 is only errors, 2 is full telemetry
+#define TELEMETRY 0     // 0 is no string, 1 is only errors, 2 is full telemetry
 #define DEFAULT_LAYER_VERSION 1
 #define INITIAL_LEARNING_RATE 0.05
 
@@ -196,11 +199,26 @@ public:
         // splitting conditions
         def_float_t mae_threshold = DEF_MAE_THRESHOLD;
 
+        #if MAE_HISTORY == 1
+            std::vector<def_float_t> mae_history;
+            
+
+
+        #endif
+
     #endif
 
 
     nlayer(){};
 
+    /**
+     * @brief create a convolutional layer with given dimensions, activation function, and learning rate.
+     * @param x The number of neurons in the x direction.
+     * @param y The number of neurons in the y direction.
+     * @param z The number of neurons in the z direction.
+     * @param activationFn The activation function of the layer.
+     * @param learning_rate The learning rate of the layer.
+    */
     nlayer(def_uint_t x, def_uint_t y, def_uint_t z, activation_fn_t activationFn, def_float_t learning_rate){
         this->layer_type = Convolutional_INPUTS;
         this->x = x;
@@ -214,6 +232,13 @@ public:
     }
 
 
+    /**
+     * @brief create a convolutional layer with given dimensions and activation function.
+     * @param x The number of neurons in the x direction.
+     * @param y The number of neurons in the y direction.
+     * @param z The number of neurons in the z direction.
+     * @param activationFn The activation function of the layer.
+    */
     nlayer(def_uint_t x, def_uint_t y, def_uint_t z, activation_fn_t activationFn) {
         this->layer_type = Convolutional_INPUTS;
         this->x = x;
@@ -226,6 +251,9 @@ public:
         this->is_dynamic_layer = 1;
     }
 
+    /**
+     * @brief create a fully connected layer to its input
+    */
     nlayer(def_uint_t x, activation_fn_t activation_fn, def_float_t learning_rate){
         this->x = x;
         this->y = 1;
@@ -233,6 +261,7 @@ public:
         this->weight_out = x;
         this->activationFn = activation_fn;
         this->learning_rate = learning_rate;
+        this->layer_type = Fully_Connected_INPUTS;
         // this->layerVersion = DEFAULT_LAYER_VERSION;
         this->is_dynamic_layer = 1;
     }
@@ -1468,34 +1497,34 @@ public:
                 std::vector<def_float_t> old_weights = this->weights;
 
 
-                #if MAE_CALCULATION == 1
-                    std::vector<def_float_t> reci_node_age(1,this->size());
+                // #if MAE_CALCULATION == 1
+                //     std::vector<def_float_t> reci_node_age(1,this->size());
 
-                    if(mae_count.size() == this->size()){
-                        for(int n = 0; n < mae_count.size(); n++){
-                            if(mae_count[n] != 0){
-                                reci_node_age[n] = 1.0/mae_count[n];
-                            }else{
-                                reci_node_age[n] = 1;
-                            }
-                        }
-                    }else{
-                        print_err("warning!")
-                    }
+                //     if(mae_count.size() == this->size()){
+                //         for(int n = 0; n < mae_count.size(); n++){
+                //             if(mae_count[n] != 0){
+                //                 reci_node_age[n] = 1.0/mae_count[n];
+                //             }else{
+                //                 reci_node_age[n] = 1;
+                //             }
+                //         }
+                //     }else{
+                //         print_err("warning!")
+                //     }
 
-                    // DONE: Verify if this is in correct form
-                    // update weights
-                    for(int i = 0; i < weight_inp; i++){
-                        for(int j = 0; j < weight_out; j++){
-                            this->weights[ flat_indx(i,j) ] += (delta_weight[ weight_inp * j + i ] * learning_rate * reci_node_age[j]);
-                        }
-                    }
+                //     // DONE: Verify if this is in correct form
+                //     // update weights
+                //     for(int i = 0; i < weight_inp; i++){
+                //         for(int j = 0; j < weight_out; j++){
+                //             this->weights[ flat_indx(i,j) ] += (delta_weight[ weight_inp * j + i ] * learning_rate * reci_node_age[j]);
+                //         }
+                //     }
 
-                    // // update bias
-                    for(int i = 0; i < weight_out; i++){
-                        this->bias[i] -= delta_bias[i] * learning_rate * reci_node_age[i];
-                    }
-                #else
+                //     // // update bias
+                //     for(int i = 0; i < weight_out; i++){
+                //         this->bias[i] -= delta_bias[i] * learning_rate * reci_node_age[i];
+                //     }
+                // #else
                     // update weights
                     for(int i = 0; i < weight_inp; i++){
                         for(int j = 0; j < weight_out; j++){
@@ -1507,7 +1536,7 @@ public:
                     for(int i = 0; i < weight_out; i++){
                         this->bias[i] -= delta_bias[i] * learning_rate;
                     }
-                #endif
+                // #endif
 
                 // input_dz = (W.T x dZ) * g'(Z)
 

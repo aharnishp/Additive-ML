@@ -13,13 +13,15 @@
 #define pb push_back
 
 #define train_data_sample_limit 43000
-#define learning_rate_def 4/4096.0
+#define learning_rate_def 64/4096.0
 // 0.015625/1
 
-#define epoch_count 3
+#define epoch_count 1
 
 #define train_batch_size_def 32
 #define test_batch_size_def 1
+
+#define MNIST_MEAN_OFFSET 0
 
 
 void print1D(std::vector<def_float_t> vec){
@@ -73,7 +75,7 @@ std::vector<def_float_t> parse_mnist_data_normalized(std::string line){
     std::stringstream ss(line);
     std::string token;
     while(std::getline(ss, token, ',')){
-        input_values.pb(std::stof(token)/255.0);
+        input_values.pb(std::stof(token)/255.0 + MNIST_MEAN_OFFSET);
     }
     return input_values;
 }
@@ -241,7 +243,7 @@ int main(){
                 // std::vector<def_float_t> input_values;
                 while(std::getline(ss, token, ',')){
                     // std::cout << (token_num++) << ",\t" << train_line_count << std::endl;
-                    training_batch.pb(std::stof(token)/255.0);
+                    training_batch.pb(std::stof(token)/255.0 + MNIST_MEAN_OFFSET);
                 }
 
                 std::cout << lab_num << "\t" << train_iter++ << std::endl;

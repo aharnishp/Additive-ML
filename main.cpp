@@ -48,7 +48,7 @@ int main(){
 
 
     // nlayer newl(3,ReLU,0.05);
-    // newl.id=4;
+    // newl.id=4;git 
     // newl.add_input_layer(net.input_layer);
     // net.output_layer->input_layers.clear();
     // net.output_layer->add_input_layer(&newl);
