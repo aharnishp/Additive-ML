@@ -34,16 +34,16 @@ int main(){
 
     net.output_layer->is_dynamic_layer = 0; // should be 1
     
-    net.add_new_layer_at_last(2,LReLU,learning_rate_def);
-    net.output_layer->is_dynamic_layer = 0;
+    // net.add_new_layer_at_last(2,LReLU,learning_rate_def);
+    // net.output_layer->is_dynamic_layer = 0;
 
     
-    net.add_new_layer_at_last(2,LReLU,learning_rate_def);
-    net.output_layer->is_dynamic_layer = 0;
+    // net.add_new_layer_at_last(2,LReLU,learning_rate_def);
+    // net.output_layer->is_dynamic_layer = 0;
 
 
-    net.add_new_layer_at_last(2,LReLU,learning_rate_def);
-    net.output_layer->is_dynamic_layer = 0;
+    // net.add_new_layer_at_last(2,LReLU,learning_rate_def);
+    // net.output_layer->is_dynamic_layer = 0;
 
 
 

@@ -12,14 +12,16 @@
 #endif
 
 #define MAE_CALCULATION 1
-#define MAE_Split_Min_training 80
-#define DEF_MAE_THRESHOLD 0.1
+
+#define MAE_Split_Min_training 40
+#define DEF_MAE_THRESHOLD 0.2
 
 #if MAE_CALCULATION == 1
     #define MAE_HISTORY 1
     #define MAE_HISTORY_SIZE 4
 #endif
 
+#define CLIPPING_MAX_THRESHOLD 3.0/10
 
 // #define fori(i,n) for(int i = 0; i < n; i++)
 // #define pb push_back
@@ -63,9 +65,9 @@ typedef enum {
 
 
 // Settings
-#define TELE_PROP 0
+#define TELE_PROP 1
 
-#define TELEMETRY 0     // 0 is no string, 1 is only errors, 2 is full telemetry
+#define TELEMETRY 1     // 0 is no string, 1 is only errors, 2 is full telemetry
 #define DEFAULT_LAYER_VERSION 1
 #define INITIAL_LEARNING_RATE 0.05
 
@@ -105,6 +107,7 @@ typedef enum {
 // Layer types
 #define Fully_Connected_INPUTS 0
 #define Convolutional_INPUTS 1
+#define Batch_Normalization 2
 
 def_float_t get_rand_float(){ srand(time(0)); return ( (float)(rand()) / (float)(RAND_MAX) ); }
 def_float_t get_rand_float_seeded(unsigned int seed){ srand(seed); return ( (float)(rand()) / (float)(RAND_MAX) ); }
@@ -200,8 +203,15 @@ public:
         def_float_t mae_threshold = DEF_MAE_THRESHOLD;
 
         #if MAE_HISTORY == 1
-            std::vector<def_float_t> mae_history;
-            
+            // 2D flattened vector that stores sum of historic activations errors in node major form (errors of neurons of single example are contiguous).
+            std::vector<def_float_t> mae_history_sum;
+
+            def_uint_t mae_start_run = 0; // stores the run id of the first column in the mae_history.
+            def_uint_t mae_runs_per_col = 1; // stores the number of runs per column in the mae_history.
+
+            def_uint_t mae_col_ptr = 0; // stores the current column pointer in the mae_history, where sums are added
+            def_uint_t mae_col_ptr_count = 0;   // stores the number of runs added to the current column pointer in the mae_history, must be less than mae_runs_per_col
+
 
 
         #endif
@@ -1304,6 +1314,9 @@ public:
                 for(int batch = 0; batch < batch_size; batch++){
                     sum += error_diff[batch_size*drow + batch]*last_input[batch_size*acol + batch];
                 }
+                if(abs(sum) > CLIPPING_MAX_THRESHOLD){
+                    sum = (sum > 0) ? CLIPPING_MAX_THRESHOLD : -CLIPPING_MAX_THRESHOLD;
+                }
                 delta_weights[weight_inp * drow + acol] = sum;
             }
         }
@@ -1706,3 +1719,4 @@ public:
 
 
 // } // namespace std
+

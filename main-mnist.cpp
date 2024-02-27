@@ -12,7 +12,7 @@
 #define fori(i,n) for(int i = 0; i < n; i++)
 #define pb push_back
 
-#define train_data_sample_limit 43000
+#define train_data_sample_limit 28000
 #define learning_rate_def 64/4096.0
 // 0.015625/1
 
@@ -99,54 +99,13 @@ int main(){
 
     nnetwork mnist1(784, 10, learning_rate_def);
     mnist1.output_layer->activationFn=Softmax;
+    // mnist1.output_layer->is_dynamic_layer=0;
 
-    mnist1.add_layer_between_output(1,LReLU,learning_rate_def);
-    // mnist1.add_layer_between_output(128,LReLU,learning_rate_def);
-    mnist1.output_layer->is_dynamic_layer=0;
-    // mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
-    // mnist1.add_layer_between_output(128,Sigmoid,learning_rate_def);
-    // mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
+    mnist1.add_layer_between_output(128,LReLU,learning_rate_def);
+    mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
 
-
-
-    // // // mnist1.add_layer_between_output(128,LReLU,0);
-    // mnist1.add_layer_between_output(64,Softmax,learning_rate_def);
-    // mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
-    // mnist1.add_layer_between_output(32,Sigmoid,learning_rate_def);
-    // mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
-    // mnist1.add_layer_between_output(16,Sigmoid,learning_rate_def);
-    // mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
-
-    // output layer has its output as input
-    // mnist1.output_layer->input_layers.push_back(mnist1.output_layer);
-    // mnist1.output_layer->input_layers.push_back(mnist1.input_layer);
-    
-    // // output layer has input layer as input
-    // mnist1.output_layer->input_layers.push_back(mnist1.output_layer->input_layers[0]);
-    // mnist1.output_layer->input_layers.push_back(mnist1.output_layer->input_layers[0]->input_layers[0]);
-
-    // mnist1.output_layer->input_layers[0]->input_layers.push_back(mnist1.input_layer);
-    
-    // mnist1.output_layer->auto_grow_weight();
-
-    // mnist1.output_layer->input_layers[0]->auto_grow_weight();
-
-    // mnist1.add_layer_between_output(10,LReLU,learning_rate_def);
-    // // mnist1.add_layer_between_output(32,LReLU,0.015625*2);
-    // // mnist1.add_layer_between_output(16,LReLU,0.015625*2);
-    // // mnist1.output_layer->input_layers.push_back(mnist1.input_layer);
-    // // mnist1.output_layer->input_layers[0]->input_layers.push_back(mnist1.input_layer);
-    
-    // mnist1.output_layer->input_layers.push_back(mnist1.output_layer->input_layers[0]->input_layers[0]);
-    // mnist1.output_layer->auto_grow_weight();
-
-    // mnist1.output_layer->input_layers.push_back(mnist1.input_layer);
-    // mnist1.output_layer->auto_grow_weight();
-    
-    // // mnist1.output_layer->input_layers[0]->auto_grow_weight();
-    // // mnist1.output_layer->input_layers[0]->input_layers[0]->auto_grow_weight();
-
-    
+    mnist1.add_layer_between_output(128,LReLU,learning_rate_def);
+    mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
 
     // mnist1.add_layer_between_output(16,ReLU,0.015625/2);
 
