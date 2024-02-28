@@ -29,6 +29,8 @@
 //// Compile Time Parameters 
 #define Low_Memory_Target 1
 
+#define AVX_Size 256
+
 #define weight_row_major 1
 
 // Compile Parameter Code
@@ -96,12 +98,6 @@ typedef enum {
 // cached_run_states
 #define un_initiated_cache_state 2
 #define initiated_cache_state 1
-
-// Activation Functions
-// #define Linear_activation_state 0
-// #define ReLU_activation_state 1
-// #define Sigmoid_activation_state 2
-// #define Exponential_activation_state 3
 
 
 // Layer types
@@ -205,15 +201,16 @@ public:
         #if MAE_HISTORY == 1
             // 2D flattened vector that stores sum of historic activations errors in node major form (errors of neurons of single example are contiguous).
             std::vector<def_float_t> mae_history_sum;
+                // MAE_HISTORY_SIZE
 
-            def_uint_t mae_start_run = 0; // stores the run id of the first column in the mae_history.
-            def_uint_t mae_runs_per_col = 1; // stores the number of runs per column in the mae_history.
+            // def_uint_t mae_start_run = 0; // stores the run id of the first column in the mae_history.
+            def_uint_t mae_runs_per_col = 1; // stores the number of runs per column in the mae_history. Doubles automatically.
 
-            def_uint_t mae_col_ptr = 0; // stores the current column pointer in the mae_history, where sums are added
-            def_uint_t mae_col_ptr_count = 0;   // stores the number of runs added to the current column pointer in the mae_history, must be less than mae_runs_per_col
+            def_uint_t mae_col_indx = 0; // stores the current column pointer in the mae_history, where sums are added
+            def_uint_t mae_col_indx_add_count = 0;   // stores number of runs added to the current column pointer in the mae_history, must be less than mae_runs_per_col
 
-
-
+            def_uint_t mae_weight_out_allocated = 0;
+            def_uint_t mae_weight_out = 0;
         #endif
 
     #endif
@@ -959,8 +956,6 @@ public:
      * @param batch_size The number of batches
     */
     void matrix_multiply(const def_float_t* A, const def_float_t* B, std::vector<def_float_t> output_vector, def_uint_t weight_inp, def_uint_t weight_out, def_uint_t batch_size){
-        // TODO: make this setting global
-        #define AVX_Size 256
 
         // check if weights are indeed stored as floats
         if(sizeof(def_float_t) == sizeof(float)){
@@ -1335,12 +1330,115 @@ public:
         }
     }
     #endif
+    
+    /**
+     * @brief returns the flattened matrix index for given column number and node number.
+     * @param col_num the column index which to access
+     * @param n is the number of neuron to read from.
+    */
+    inline def_uint_t mae_history_flat_indx(def_uint_t col_num, def_uint_t n){
+        return col_num*mae_weight_out_allocated + n;
+    }
+    
+    /**
+     * @brief adds all current columns to previous columns to make it compact, and store history with les precision for more iterations.
+     */
+    void compress_mae_history(){
+        // handle first column separately for speed
+        for(int n = 0; n < mae_weight_out; n++){
+            mae_history_sum[mae_history_flat_indx(0, n)] += mae_history_sum[mae_history_flat_indx(1, n)];
+        }
+        
+        for(int ncol = 1; ncol*2 < MAE_HISTORY_SIZE; ncol++){
+            // add all values from column 2*ncol & 2*ncol+1 to ncol
+            int indx_a = ncol*2;
+            int indx_b = ncol*2+1;
+            if(indx_b >= MAE_HISTORY_SIZE){ // for odd num size
+                break;
+            }
+
+            // copy to ncol
+            for(int n = 0; n < mae_weight_out; n++){
+                mae_history_sum[mae_history_flat_indx(ncol,n)] = mae_history_sum[mae_history_flat_indx(indx_a,n)] + mae_history_sum[mae_history_flat_indx(indx_b,n)];
+            }
+            // memset(mae_history_sum[mae_history_flat_indx(ncol, 0)], 0, sizeof(def_float_t)*mae_weight_out);
+        }
+        // check if HISTORTY_SIZE is odd
+        if(MAE_HISTORY_SIZE%2 == 0){ //is even
+            // change state variables
+            mae_col_indx = MAE_HISTORY_SIZE/2;
+            mae_runs_per_col *= 2;
+            mae_col_indx_add_count = 0;   // stores number of runs added to the current column pointer in the mae_history, must be less than mae_runs_per_col
+        }else{  // is odd
+            // copy last col to middle
+            mae_col_indx = MAE_HISTORY_SIZE/2; // middle
+            for(int n = 0; n < mae_weight_out; n++){
+                mae_history_sum[mae_history_flat_indx(MAE_HISTORY_SIZE - 1,n)] = mae_history_sum[mae_history_flat_indx(mae_col_indx,n)];
+            }
+            mae_col_indx_add_count = mae_runs_per_col;
+            mae_runs_per_col *= 2;
+        }
+        
+    }
+    
+    /**
+     * @brief this function adds given activation errors to mae_hstory_sum vector
+     * @param run_id current run_id
+     * @param activation_error in batch-major format
+     * @param batch_size int of the batch size of activation errors
+    */
+    void store_errors(int run_id, std::vector<def_float_t> activation_errors, def_uint_t batch_size){
+        // adds the sum of errors to current errors
+        // mae_runs_per_col;
+        if(weight_out > mae_weight_out_allocated){
+                // need to reserve new rows
+                // TODO:
+                // resize_mae_history();
+                def_uint_t old_weight_size = mae_weight_out;
+                def_uint_t old_weight_alloc_size = mae_weight_out_allocated;
+                
+                def_uint_t new_mae_weight_out = this->size();
+                def_uint_t new_mae_weight_out_allocated = get_default_reserve_size(this->size());
+                                
+                mae_history_sum.resize(MAE_HISTORY_SIZE * new_mae_weight_out_allocated);
+                // copy from old position to new positions
+                for(int col_indx = mae_col_indx; mae_col_indx > 0; col_indx--){ // iterate from last to first
+                    for(int n = old_weight_size; n >= 0; n--){
+                        mae_history_sum[col_indx*new_mae_weight_out_allocated + n] = mae_history_sum[col_indx*old_weight_alloc_size + n];
+                    }
+                }                
+                mae_weight_out = new_mae_weight_out;
+                mae_weight_out_allocated = new_mae_weight_out_allocated;
+                
+        }
+        
+        if(weight_out == mae_weight_out){   // check if allocated is same or not
+            // start adding current errors to this.
+            for (int n = 0; n < this->size(); n++){
+                for(int batch = 0; batch < batch_size; batch++){
+                    mae_history_sum[mae_history_flat_indx(mae_col_indx, n)] += activation_errors[(n + batch*this->weight_out)];
+                    // FIXME: Slow code below (because conditional statement is inside for loop every batch)
+                    mae_col_indx_add_count += 1;
+                    if(mae_col_indx_add_count >= mae_runs_per_col){
+                        mae_col_indx_add_count = 0;
+                        mae_col_indx++;
+                    }
+                    if(mae_col_indx >= MAE_HISTORY_SIZE){
+                        compress_mae_history();
+                    }
+                }
+            }
+            
+        }else{
+            
+        }
+    }
 
     /**
      * @brief Calculate the backprop error for this layer.
      * @param run_id The run_id of the current run.
      * @param batch_size The batch size of the current run.
-     * @param activation_error The error of the next layer.
+     * @param activation_error The error of the next layer in batch-major form.
      * @param learning_rate The learning rate of the current run.
     */
     std::vector<def_float_t> get_correct_error_rec(def_int_t run_id, def_uint_t batch_size, std::vector<def_float_t>& activation_error, def_float_t learning_rate){

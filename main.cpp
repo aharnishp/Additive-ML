@@ -30,7 +30,7 @@ int main(){
 
     net.output_layer->print_weights();
 
-    std::cout << "net.output_layer->weights.size() = " << net.output_layer->weights.size() << std::endl;
+    std::cout << "net.output_lahyer->weights.size() = " << net.output_layer->weights.size() << std::endl;
 
     net.output_layer->is_dynamic_layer = 0; // should be 1
     
