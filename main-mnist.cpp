@@ -12,11 +12,11 @@
 #define fori(i,n) for(int i = 0; i < n; i++)
 #define pb push_back
 
-#define train_data_sample_limit 28000
-#define learning_rate_def 64/4096.0
-// 0.015625/1
+#define train_data_sample_limit 42000
+#define learning_rate_def 16/4096.0
+// 0.015625/1 // 64/4096.0
 
-#define epoch_count 1
+#define epoch_count 3
 
 #define train_batch_size_def 32
 #define test_batch_size_def 1
@@ -101,11 +101,18 @@ int main(){
     mnist1.output_layer->activationFn=Softmax;
     // mnist1.output_layer->is_dynamic_layer=0;
 
-    mnist1.add_layer_between_output(128,LReLU,learning_rate_def);
+
+    // mnist1.add_layer_between_output(16,custom1,learning_rate_def);
+    // mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
+
+    mnist1.add_layer_between_output(64,custom1,learning_rate_def);
     mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
 
-    mnist1.add_layer_between_output(128,LReLU,learning_rate_def);
+    mnist1.add_layer_between_output(64,custom1,learning_rate_def);
     mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
+
+    mnist1.output_layer->add_input_layer(mnist1.output_layer->input_layers[0]->input_layers[0]);
+    mnist1.output_layer->input_layers[0]->add_input_layer(mnist1.input_layer);
 
     // mnist1.add_layer_between_output(16,ReLU,0.015625/2);
 

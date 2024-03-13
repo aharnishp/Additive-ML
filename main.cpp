@@ -13,7 +13,7 @@
 #define pb push_back
 
 #define train_data_sample_limit 43000
-#define learning_rate_def 1.0/2048.0
+#define learning_rate_def 8.0/2048.0
 // 0.015625
 
 #define epoch_count 1
@@ -23,21 +23,25 @@
 
 int main(){
     nnetwork net(2,2,learning_rate_def);
-
     net.output_layer->activationFn=LReLU;
-    // net.output_layer->init_weight(1,1);
     net.output_layer->fix_weights();
 
+    // nlayer myBatchNorm(Batch_Normalization);
+
+    // // myBatchNorm.input_layers = {net.input_layer};
+    // myBatchNorm.add_input_layer(net.input_layer);
+
+    // net.output_layer->input_layers = {&myBatchNorm};
+
     net.output_layer->print_weights();
-
     std::cout << "net.output_lahyer->weights.size() = " << net.output_layer->weights.size() << std::endl;
-
     net.output_layer->is_dynamic_layer = 0; // should be 1
-    
+
+
     // net.add_new_layer_at_last(2,LReLU,learning_rate_def);
     // net.output_layer->is_dynamic_layer = 0;
 
-    
+
     // net.add_new_layer_at_last(2,LReLU,learning_rate_def);
     // net.output_layer->is_dynamic_layer = 0;
 
@@ -48,7 +52,7 @@ int main(){
 
 
     // nlayer newl(3,ReLU,0.05);
-    // newl.id=4;git 
+    // newl.id=4;git
     // newl.add_input_layer(net.input_layer);
     // net.output_layer->input_layers.clear();
     // net.output_layer->add_input_layer(&newl);
@@ -57,11 +61,11 @@ int main(){
     net.print_architecture();
 
     // net.output_layer->auto_grow_weight();
-    
+
     // net.output_layer->auto_grow_weight(2,2)
 
 
-    
+
     std::cout << "net.output_layer->weights.size() = " << net.output_layer->weights.size() << std::endl;
 
     // for(int i = 0; i< 100; i++){
@@ -71,6 +75,7 @@ int main(){
     vector<def_float_t> input = {1,5,5,1};
     vector<def_float_t> output = {0,1,1,0};
     vector<def_float_t> expected_output = {1,5,5,1};
+
 
     // output = net.forward_prop(input,2);
 
@@ -110,6 +115,7 @@ int main(){
         net.output_layer->print_weights();
         std::cout << std::endl;
         std::cout << std::endl;
+
     }
 
     output = net.forward_prop(input,2);
@@ -120,6 +126,10 @@ int main(){
         std::cout << output[i] << " ";
     }
     std::cout << std::endl;
+
+    nlayer mynlayer;
+
+    std::cout << "size of (mynlayer) = " << sizeof(mynlayer) << std::endl;
 
     // std::cout << "Network created" << std::endl;
 

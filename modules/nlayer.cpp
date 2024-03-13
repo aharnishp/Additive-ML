@@ -5,11 +5,15 @@
 #include <cstring>
 #if defined(__x86_64__) || defined(__aarch64__)
     #define USE_SIMD 0    // previously = 1
-    #include<cblas.h>
+    // #include<cblas.h>
     #include<immintrin.h>
 #else
     #define USE_SIMD 0
 #endif
+
+#define BACKPROP_MOMENTUM 1
+#define BACKPROP_MOMENTUM_FACTOR 0.5
+
 
 #define MAE_CALCULATION 1
 
@@ -21,7 +25,7 @@
     #define MAE_HISTORY_SIZE 4
 #endif
 
-#define CLIPPING_MAX_THRESHOLD 3.0/10
+#define CLIPPING_MAX_THRESHOLD 5.0/10.0
 
 // #define fori(i,n) for(int i = 0; i < n; i++)
 // #define pb push_back
@@ -60,7 +64,8 @@ typedef enum {
     Sigmoid = 2,
     Exponential = 3,
     Softmax = 4,
-    LReLU = 5
+    LReLU = 5,
+    custom1 = 6
 } activation_fn_t;
 
 #define leaky_relu_slope 0.05
@@ -101,9 +106,15 @@ typedef enum {
 
 
 // Layer types
-#define Fully_Connected_INPUTS 0
-#define Convolutional_INPUTS 1
-#define Batch_Normalization 2
+typedef enum {
+    Fully_Connected_INPUTS = 0,
+    Convolutional_INPUTS = 1,
+    Batch_Normalization = 2
+} nlayer_conn_t;
+
+// #define Fully_Connected_INPUTS 0
+// #define Convolutional_INPUTS 1
+// #define Batch_Normalization 2
 
 def_float_t get_rand_float(){ srand(time(0)); return ( (float)(rand()) / (float)(RAND_MAX) ); }
 def_float_t get_rand_float_seeded(unsigned int seed){ srand(seed); return ( (float)(rand()) / (float)(RAND_MAX) ); }
@@ -119,7 +130,12 @@ public:
     // general info
     def_uint_t id = 0;
 
-    def_uint_small_t layer_type = Fully_Connected_INPUTS;
+
+
+    // Fully_Connected_INPUTS = 0,
+    // Convolutional_INPUTS = 1,
+    // Batch_Normalization = 2
+    nlayer_conn_t layer_type = Fully_Connected_INPUTS;
     // def_uint_t layerVersion = 0;
 
     // shape of this 3D layer
@@ -141,6 +157,10 @@ public:
     // NOTE: 2D weights matrix is stored as as 1D flattened vector expected as row major.
     // vector<def_float_t> weights; // weights[m][n] = weights[m * weight_inp + n]
     std::vector<def_float_t> weights;
+    #if BACKPROP_MOMENTUM == 1
+        std::vector<def_float_t> weights_delta_velocity;     // follows the same allocation parameters as of the weights martix
+        std::vector<def_float_t> bias_delta_velocity;
+    #endif
 
     // NOTE: 4D vector of filters is stored as 1D flattened vector expected as row major. Hence all filters must be of same size or need to make new layer for heterogenous sizes.
     def_uint_t num_filters = 0;
@@ -284,6 +304,11 @@ public:
         // this->layerVersion = DEFAULT_LAYER_VERSION;
         this->is_dynamic_layer = 1;
     }
+
+    nlayer(nlayer_conn_t new_layer_type){
+        this->layer_type = new_layer_type;
+        this->learning_rate = INITIAL_LEARNING_RATE;
+    }
     
     /**
      * @brief returns the index of the weight matrix in the flattened vector.
@@ -391,6 +416,9 @@ public:
             std::cout << "DEPRECATED: init weight was called, id=" << this->id << std::endl;
 
             this->weights.clear();
+            #if BACKPROP_MOMENTUM == 1
+                weights_delta_velocity.clear();
+            #endif
             // this->weights.resize(weight_inp * weight_out);
 
             def_uint_small_t has_relu = 0;
@@ -416,6 +444,18 @@ public:
             }
             this->weights.resize(this->weight_inp_allocated * this->weight_out_allocated);
 
+            #if BACKPROP_MOMENTUM == 1
+                this->weights_delta_velocity.resize(this->weight_inp_allocated * this->weight_out_allocated);
+                // set velocity to 0
+                for(int i = 0; i < this->weight_inp_allocated * this->weight_out_allocated; i++){
+                    this->weights_delta_velocity[i] = 0;
+                }
+                this->bias_delta_velocity.resize(this->weight_out);
+                for(int i = 0; i < this->weight_out; i++){
+                    this->bias_delta_velocity[i] = 0;
+                }
+            #endif
+
             def_int_t rand_seed = get_rand_float()*1000;
 
             if(weight_inp == 0 || weight_out == 0){
@@ -439,7 +479,6 @@ public:
                             def_float_t u2 = get_rand_float_seeded((rand_seed++) + 1);
                             weights[flat_indx(row, col)] = sqrt(-2 * log(u1)) * cos(2 * M_PI * u2);
                             weights[flat_indx(row, col)] *= std_dev;
-                        
                         }
                     }
                     // for (int i = 0; i < weight_inp * weight_out; i++){
@@ -484,23 +523,16 @@ public:
                 }
             }
 
-        }else if(this->activationFn == ReLU){
-            // cblas_d
-            #if USE_SIMD
-            // TODO: Use SIMD here instead
-                for(int i = 0; i < input_vector.size(); i++){
-                    if(input_vector[i] < 0){
-                        input_vector[i] = 0;
-                    }
+
+
+        }else if(this->activationFn == custom1){
+            for(int i = 0; i < input_vector.size(); i++){
+                if(input_vector[i] < 0){
+                    input_vector[i] *= 0.1;
+                }else if(input_vector[i] > 1){
+                    input_vector[i] = 1 + (input_vector[i] - 1) * 0.1;
                 }
-                // cblas_smax(0.0f, input_vector.data(), 1, input_vector.size());
-            #else
-                for(int i = 0; i < input_vector.size(); i++){
-                    if(input_vector[i] < 0){
-                        input_vector[i] = 0;
-                    }
-                }
-            #endif
+            }
         }else if(this->activationFn == Sigmoid){
             for(int i = 0; i < input_vector.size(); i++){
                 input_vector[i] = 1/(1 + exp(-input_vector[i]));
@@ -558,6 +590,12 @@ public:
                 for(int i = 0; i < input_vector.size(); i++){
                     if(input_vector[i] < 0){
                         input_vector[i] = 0;
+                    }
+                }
+            }else if(this->activationFn == custom1){
+                for(int i = 0; i < input_vector.size(); i++){
+                    if(input_vector[i] < 0 || input_vector[i] > 1){
+                        input_vector[i] *= 0.1;
                     }
                 }
             }else if(this->activationFn == Exponential){    // TODO:
@@ -640,6 +678,7 @@ public:
 
     /**
      * @breif calculate the size of expected layer's inputs and outputs, and resize weights matrix with reserve
+     * @param new_weight_inp (optional)
     */
     def_uint_t fix_weights(def_uint_t new_weight_inp = 0, def_uint_t new_weight_out = 0){
         def_uint_small_t random_weight_init = 1;
@@ -674,6 +713,13 @@ public:
                 def_uint_t old_bias_size = this->bias.size();
 
                 bias.resize(new_weight_out);
+                // initializing the new bias values
+                #if BACKPROP_MOMENTUM == 1
+                    this->bias_delta_velocity.resize(new_weight_out);
+                    for(int i = old_bias_size; i < new_weight_out; i++){
+                        this->bias_delta_velocity[i] = 0;
+                    }
+                #endif
                 if(random_weight_init){
                     for(int n = old_bias_size; n < new_weight_out; n++){
                         bias[n] = get_rand_float_seeded(seed1++);
@@ -697,6 +743,9 @@ public:
                     def_uint_t old_weight_inp_allocated = this->weight_inp_allocated;
                     this->weight_inp_allocated = get_default_reserve_size(new_weight_inp);
                     this->weights.resize(this->weight_inp_allocated * this->weight_out_allocated);
+                    #if BACKPROP_MOMENTUM == 1
+                        this->weights_delta_velocity.resize(this->weight_inp_allocated * this->weight_out_allocated);
+                    #endif
 
                     // shift the weights to conform as a flattened matrix
                     // for each yth row from last copying weights from block((y*old_weight_inp_allocated) <= i < ((y+1)*old_weight_inp_allocated) to postion(y*weight_inp_allocated)
@@ -758,6 +807,10 @@ public:
                     
                     this->weights.resize(this->weight_inp_allocated * this->weight_out_allocated);
 
+                    #if BACKPROP_MOMENTUM == 1
+                        this->weights_delta_velocity.resize(this->weight_inp_allocated * this->weight_out_allocated);
+                    #endif
+
                     this->weight_out = new_weight_out;
                 }
                 if(random_weight_init){
@@ -778,13 +831,16 @@ public:
                         }
                     }
 
+                    // fill zeros in delta velocities
+                    #if BACKPROP_MOMENTUM == 1
+                        for(int i = old_weight_out_allocated*this->weight_inp_allocated; i < this->weight_out_allocated * this->weight_inp_allocated; i++){
+                            this->weights_delta_velocity[i] = 0;
+                        }
+                    #endif
                 }
             }
-    
-
         }
         // std::cout << "Weights fixed!" << std::endl;
-
         return 0;
     }
 
@@ -1331,13 +1387,14 @@ public:
     }
     #endif
     
+    #if MAE_HISTORY == 1
     /**
      * @brief returns the flattened matrix index for given column number and node number.
      * @param col_num the column index which to access
      * @param n is the number of neuron to read from.
     */
     inline def_uint_t mae_history_flat_indx(def_uint_t col_num, def_uint_t n){
-        return col_num*mae_weight_out_allocated + n;
+        return ( ( col_num * mae_weight_out_allocated ) + n );
     }
     
     /**
@@ -1416,7 +1473,7 @@ public:
             // start adding current errors to this.
             for (int n = 0; n < this->size(); n++){
                 for(int batch = 0; batch < batch_size; batch++){
-                    mae_history_sum[mae_history_flat_indx(mae_col_indx, n)] += activation_errors[(n + batch*this->weight_out)];
+                    mae_history_sum[mae_history_flat_indx(mae_col_indx, n)] += abs(activation_errors[(n + batch*this->weight_out)]);
                     // FIXME: Slow code below (because conditional statement is inside for loop every batch)
                     mae_col_indx_add_count += 1;
                     if(mae_col_indx_add_count >= mae_runs_per_col){
@@ -1433,6 +1490,7 @@ public:
             
         }
     }
+    #endif
 
     /**
      * @brief Calculate the backprop error for this layer.
@@ -1636,17 +1694,47 @@ public:
                 //         this->bias[i] -= delta_bias[i] * learning_rate * reci_node_age[i];
                 //     }
                 // #else
-                    // update weights
-                    for(int i = 0; i < weight_inp; i++){
-                        for(int j = 0; j < weight_out; j++){
-                            this->weights[ flat_indx(i,j) ] += (delta_weight[ weight_inp * j + i ] * learning_rate);
-                        }
-                    }
 
-                    // // update bias
-                    for(int i = 0; i < weight_out; i++){
-                        this->bias[i] -= delta_bias[i] * learning_rate;
-                    }
+
+                    #if BACKPROP_MOMENTUM == 1
+                        // update each weight with momentum of delta weight
+                        for(int i = 0; i < weight_inp; i++){
+                            for (int j = 0; j < weight_out; j++){
+                                this->weights_delta_velocity[ flat_indx(i,j) ] = BACKPROP_MOMENTUM_FACTOR*(delta_weight[ weight_inp * j + i ]) + (1-BACKPROP_MOMENTUM_FACTOR)*this->weights_delta_velocity[ flat_indx(i,j) ];
+                            }
+                        }
+
+                        for (int i = 0; i < weight_out; i++){
+                            this->bias_delta_velocity[i] *= BACKPROP_MOMENTUM_FACTOR;
+                            this->bias_delta_velocity[i] += (1-BACKPROP_MOMENTUM_FACTOR)*delta_bias[i];
+                        }
+
+
+                        // update weights
+                        for(int i = 0; i < weight_inp; i++){
+                            for(int j = 0; j < weight_out; j++){
+                                this->weights[ flat_indx(i,j) ] += this->weights_delta_velocity[ flat_indx(i,j) ] * learning_rate;
+                            }
+                        }
+
+                        // // update bias
+                        for(int i = 0; i < weight_out; i++){
+                            this->bias[i] -= bias_delta_velocity[i] * learning_rate;
+                        }
+                    #else
+                        // update weights
+                        for(int i = 0; i < weight_inp; i++){
+                            for(int j = 0; j < weight_out; j++){
+                                this->weights[ flat_indx(i,j) ] += (delta_weight[ weight_inp * j + i ] * learning_rate);
+                            }
+                        }
+
+                        // // update bias
+                        for(int i = 0; i < weight_out; i++){
+                            this->bias[i] -= delta_bias[i] * learning_rate;
+                        }
+                    #endif
+
                 // #endif
 
                 // input_dz = (W.T x dZ) * g'(Z)
