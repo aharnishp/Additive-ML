@@ -11,8 +11,10 @@
     #define USE_SIMD 0
 #endif
 
+
+// the closer to 0, more smooth it is
 #define BACKPROP_MOMENTUM 1
-#define BACKPROP_MOMENTUM_FACTOR 0.5
+#define BACKPROP_MOMENTUM_FACTOR 0.05
 
 
 #define MAE_CALCULATION 1
@@ -69,7 +71,7 @@ typedef enum {
 } activation_fn_t;
 
 #define leaky_relu_slope 0.05
-
+#define gamma_weights weights
 
 // Settings
 #define TELE_PROP 1
@@ -563,12 +565,15 @@ public:
         }
     }
 
-    def_int_t size(){
-        if(Fully_Connected_INPUTS){
-            return this->x * this->y * this->z;
-        }else{
-            return this->x * this->y * this->z;
-        }
+    inline def_int_t size(){
+        return (this->x * this->y * this->z);
+        // if(layer_type == Fully_Connected_INPUTS){
+        //     return this->x * this->y * this->z;
+        // }else if(layer_type == Batch_Normalization){
+        //     return this->
+        // }else{
+        //     return this->x * this->y * this->z;
+        // }
     }
 
     void multiply_activation_derivative_fn(std::vector<def_float_t>& input_vector){
@@ -692,8 +697,10 @@ public:
                     new_weight_inp += this->input_layers[i]->size();
                 }
             }
+            // HACK: for starting allocation
             if(new_weight_out == 0){
                 new_weight_out = this->size();
+                weight_out_allocated = 1;
             }
 
             if(TELEMETRY==2){
@@ -839,6 +846,113 @@ public:
                     #endif
                 }
             }
+        }else if(layer_type == Batch_Normalization){
+            // DONE: REQUIRED FOR BATCH NORMALIZATION WEIGHT RESIZING.
+            
+            // calculate the size of expected layer's inputs and outputs, and resize weights matrix with reserve
+            if (new_weight_inp == 0){
+                for(int i = 0; i < this->input_layers.size(); i++){
+                    new_weight_inp += this->input_layers[i]->size();
+                }
+            }
+            // HACK: for starting allocation
+            if(new_weight_out == 0){
+                new_weight_out = 1;
+                weight_out_allocated = 1;
+            }
+
+            new_weight_out = 1; // HARDCODED for now
+
+            // if any of it is 0, then return error
+            if(new_weight_inp == 0){
+                if(TELEMETRY){
+                    std::cout << "Error: batch_norm, fix_weights-> input dimension is 0, id=" << this->id << " size=(new_wi=" << new_weight_inp << ",new_wo=" << new_weight_out << ")     (old_wi=" << weight_inp << ",old_w=" << weight_out << ")" <<  std::endl;
+                }
+                return 1;
+            }
+
+            // actually the output activations are of same size as inputs, so the matrix should be scaling identity matrix of size weight_inp x weight_inp, but to save memory, only the diagonals are stored.
+            // and the bias is of size weight_inp instead of weight_out
+
+            // for consistency in size() method, the x variable is updated by weight_inp
+            this->x = new_weight_inp;
+
+            // handling bias
+            if(new_weight_inp > this->bias.size()){
+                def_uint_t old_bias_size = this->bias.size();
+
+                bias.resize(new_weight_inp);
+                // initializing the new bias values
+                #if BACKPROP_MOMENTUM == 1
+                    this->bias_delta_velocity.resize(new_weight_inp);
+                    for(int i = old_bias_size; i < new_weight_inp; i++){
+                        this->bias_delta_velocity[i] = 0;
+                    }
+                #endif
+                if(random_weight_init){
+                    for(int n = old_bias_size; n < new_weight_inp; n++){
+                        bias[n] = get_rand_float_seeded(seed1++);
+                    }
+                }else{
+                    for(int n = old_bias_size; n < new_weight_inp; n++){
+                        bias[n] = 0;
+                    }
+                }
+
+                
+            }
+
+            if(new_weight_inp > this->weight_inp && this->weight_out_allocated > 0){
+                // if already allocated, then just change the weight_inp
+                def_uint_t old_weight_inp = this->weight_inp;
+                if(new_weight_inp <= this->weight_inp_allocated){
+                    this->weight_inp = new_weight_inp;
+                }else{
+                        // if not allocated, then allocate more
+                    def_uint_t old_weight_inp_allocated = this->weight_inp_allocated;
+                    this->weight_inp_allocated = get_default_reserve_size(new_weight_inp);
+                    this->weights.resize(this->weight_inp_allocated * this->weight_out_allocated);
+                    #if BACKPROP_MOMENTUM == 1
+                        this->weights_delta_velocity.resize(this->weight_inp_allocated * this->weight_out_allocated);
+                    #endif
+
+                    // shift the weights to conform as a flattened matrix
+                    // for each yth row from last copying weights from block((y*old_weight_inp_allocated) <= i < ((y+1)*old_weight_inp_allocated) to postion(y*weight_inp_allocated)
+                    // for each row from last to first
+                    // for(int row = weight_out - 1; row >= 0; row--){
+                    //     // for each element as a block to make it vectorizable
+                    //     for(int n = old_weight_inp_allocated - 1; n >= 0; n--){
+                    //         // copying element from old index to new index
+                    //         weights[row*weight_inp_allocated + n] = weights[(row*old_weight_inp_allocated + n)];
+                    //     }
+                    // }
+                    this->weight_inp = new_weight_inp;
+                    this->x = weight_inp;
+                    this->y = 1;
+                    this->z = 1;
+                }
+                if(random_weight_init){
+                    // if random weight init, then initialize the new weights
+
+                    def_uint_small_t init_method = 0;
+                    if(this->activationFn == Sigmoid || this->activationFn == Exponential){
+                        init_method = 1;
+                    }else if(this->activationFn == ReLU || this->activationFn == LReLU){
+                        init_method = 2;
+                    }
+
+                    if(fill_weight_value_initialization(this->weights, flat_indx(old_weight_inp, 0), flat_indx(this->weight_inp, this->weight_out), old_weight_inp, this->weight_out, init_method)){
+                        // LEGACY: was uniform initialization below
+                        for(int i = 0; i < this->weight_out; i++){
+                            for(int j = old_weight_inp; j < this->weight_inp; j++){
+                                this->weights[flat_indx(j, i)] = get_rand_float_seeded(seed1++);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // change for size() by changing x = weight_inp, y = 1, z = 1
         }
         // std::cout << "Weights fixed!" << std::endl;
         return 0;
@@ -1107,11 +1221,77 @@ public:
         #endif
     }
 
+    /**
+     * @brief given the n number and batch number, returns the index on column major activations (activaitons of single data point of all neurons are together.)
+    */
+    inline def_uint_t activations_flat_indx(def_uint_t n, def_uint_t batch){
+        return (n + (weight_inp * batch));
+    }
+
+    /**
+     * @brief returns a vector of mean of activations of this layer's neurons.
+     * @param activations expects flattened array of activations as row major (activation of all neurons together.)
+     * @param batch_size number of batches whose activations are provided.
+    */
+    std::vector<def_float_t> get_means(std::vector<def_float_t> & activations, def_uint_t batch_size){
+        std::vector<def_float_t> mean_activations(this->weight_inp, 0);
+
+        // collect sums into array
+        for(int batch = 0; batch < batch_size; batch++){
+            for(int n = 0; n < this->weight_inp; n++){
+                mean_activations[n] += activations[activations_flat_indx(n,batch)];
+            }
+        }
+
+        // divide by batch_size
+        def_float_t div_factor = 1.0/batch_size;
+        for(int n = 0; n < this->weight_inp; n++){
+            mean_activations[n] *= div_factor;
+        }
+
+        return mean_activations;
+    }
+
+    std::vector<def_float_t> get_std_dev(std::vector<def_float_t> & activations, def_uint_t batch_size){ // std::vector<def_float_t> & mean_vec 
+        // given the mean_vec, subtract from each, square & sum the values
+        std::vector<def_float_t> std_dev(weight_inp, 0);
+
+        // LEGACY: was required if mean_vec is given, and activations are not already modified.
+        // for(int batch = 0; batch < batch_size; batch++){
+        //     for(int n = 0; n < this->weight_inp; n++){
+        //         def_float_t diff = (activations[n + weight_inp*batch] - mean_vec[n]);
+        //         std_dev[n] = diff * diff;
+        //     }
+        // }
+
+        for(int batch = 0; batch < batch_size; batch++){
+            for(int n = 0; n < this->weight_inp; n++){
+                def_float_t val = activations[activations_flat_indx(n,batch)];
+                std_dev[n] = val * val; // squaring each value
+            }
+        }
+        
+        def_float_t div_factor = 1.0/batch_size;
+        static def_float_t sqrt_epsilon = 0.01; 
+        for(int n = 0; n < weight_inp; n++){
+            std_dev[n] *= div_factor;
+            std_dev[n] += sqrt_epsilon; // to avoid division by zero
+            std_dev[n] = sqrt(std_dev[n]);
+        }
+
+        return std_dev; 
+    }
+    
+
+    
+
 
     /**
      * @brief returns activation values of this layer's neurons.
     */
     std::vector<def_float_t> get_activation_rec(def_int_t run_id, def_uint_t batch_size){
+
+        // collect inputs
         // this is memory inefficient, but faster to implement.
         if(this->cached_run_id == run_id || this->being_evaluated == 1){  // check whether to return directly from cache if already calculated.
             if(TELEMETRY == 2) { std::cout << "Result returned from cache. id=" << this->id << " size=" << this->x * this->y * this->z << std::endl;}
@@ -1130,62 +1310,44 @@ public:
         }
 
         this->being_evaluated = 1;  // lock flag and prevent cyclic evaluations.
-
         
+        if(weight_inp == 0 || weight_out == 0){
+            print_err("Error weight dimensions are unknown.")
+        }
+        // confirm if this layer weights are actually flattened appropriately
+        // build an array of input activation before calculating itself's activation
+        std::vector<def_float_t> input_activations;
 
+        // keep activations ready for each input layer to reduce memory overhead of recursion
+        for(int indx = 0; indx < this->input_layers.size(); indx++){
+            nlayer * this_layer = this->input_layers[indx];
 
-        if(this->layer_type == Fully_Connected_INPUTS){
-            if(weight_inp == 0 || weight_out == 0){
-                print_err("Error weight dimensions are unknown.")
+            if(this_layer->cached_run_id != run_id || this_layer->cached_batch_size != batch_size){
+                this->input_layers[indx]->get_activation_rec(run_id, batch_size);
             }
-
-            // check if current layer output size has grown
-            // if(weight_out != this->size(){
-            //     grow_weights(weight_inp, this->size(), 1);
-            // }
-
-            // confirm if this layer weights are actually flattened appropriately
-                            
-            // build an array of input activation before calculating itself's activation
-            std::vector<def_float_t> input_activations;
-
-            // assuming the input_activations are in column_major (such that activations of single batch are contiguous)
-            // collect activations of all layers and append to vector input_activations batch-wise
-            
-            // for(int i = 0; i < this->input_layers.size(); i++){
-            //     std::vector<def_float_t> new_activation;
-            //     new_activation = this->input_layers[i]->get_activation_rec(run_id, batch_size);
-            //     input_activations.insert(input_activations.end(), new_activation.begin(), new_activation.end());
-            // }
-
-            // keep activations ready for each input layer to reduce memory overhead of recursion
+        }
+        
+        // traverse layers for each batch
+        for(int batch = 0; batch < batch_size; batch++){
             for(int indx = 0; indx < this->input_layers.size(); indx++){
                 nlayer * this_layer = this->input_layers[indx];
+                // take the cached values directly
+                if(this_layer->cached_run_id == run_id && this_layer->cached_batch_size == batch_size){
+                    auto start_indx = this_layer->cached_activation_values.begin() + (batch * this_layer->size());
+                    auto end_indx = (this_layer->cached_activation_values.begin() + ((batch + 1) * this_layer->size()));
+                    input_activations.insert(input_activations.end(), start_indx, end_indx);
+                }else{
+                    std::vector<def_float_t> new_activation;
+                    new_activation = this->input_layers[indx]->get_activation_rec(run_id, batch_size);
+                    auto start_indx = this_layer->cached_activation_values.begin() + (batch * this_layer->size());
+                    auto end_indx = (this_layer->cached_activation_values.begin() + ((batch + 1) * this_layer->size()));
+                    input_activations.insert(input_activations.end(), start_indx, end_indx);
 
-                if(this_layer->cached_run_id != run_id || this_layer->cached_batch_size != batch_size){
-                    this->input_layers[indx]->get_activation_rec(run_id, batch_size);
                 }
-            }
-            
-            // traverse layers for each batch
-            for(int batch = 0; batch < batch_size; batch++){
-                for(int indx = 0; indx < this->input_layers.size(); indx++){
-                    nlayer * this_layer = this->input_layers[indx];
-                    // take the cached values directly
-                    if(this_layer->cached_run_id == run_id && this_layer->cached_batch_size == batch_size){
-                        auto start_indx = this_layer->cached_activation_values.begin() + (batch * this_layer->size());
-                        auto end_indx = (this_layer->cached_activation_values.begin() + ((batch + 1) * this_layer->size()));
-                        input_activations.insert(input_activations.end(), start_indx, end_indx);
-                    }else{
-                        std::vector<def_float_t> new_activation;
-                        new_activation = this->input_layers[indx]->get_activation_rec(run_id, batch_size);
-                        auto start_indx = this_layer->cached_activation_values.begin() + (batch * this_layer->size());
-                        auto end_indx = (this_layer->cached_activation_values.begin() + ((batch + 1) * this_layer->size()));
-                        input_activations.insert(input_activations.end(), start_indx, end_indx);
+            }    
+        }
 
-                    }
-                }    
-            }
+        if(this->layer_type == Fully_Connected_INPUTS){
 
             this->fix_weights((input_activations.size()/batch_size), this->size());
 
@@ -1194,7 +1356,7 @@ public:
                 print_err("Error: Input size(" << input_activations.size() <<") does not match weight matrix size.")
                 def_uint_t new_weight_out_size = this->weight_out;
                 if(this->weight_out == 0){
-                    new_weight_out_size = this->x * this->y * this->z;
+                    new_weight_out_size = this->size();
                 }
                 this->grow_weights(input_activations.size(), new_weight_out_size, 1);
             }
@@ -1304,8 +1466,81 @@ public:
             // check if existing dimensions of this->weights matches with size of inputs 
             this->being_evaluated = 0;
         }else if(this->layer_type == Convolutional_INPUTS){
-
             this->being_evaluated = 0;
+        }else if(this->layer_type == Batch_Normalization){
+            // weight_input = number of inputs neurons
+            // weight_out = 1  => because col 0 stores gamma & beta values are stored in bias vec
+            this->fix_weights((input_activations.size()/batch_size), 1);
+
+            if(input_activations.size() == weight_inp * batch_size){
+                // find mean and variance per node
+                std::vector<def_float_t> mean_vec(weight_inp, 0);
+                std::vector<def_float_t> std_dev_vec(weight_inp, 0);
+
+                mean_vec = get_means(input_activations, batch_size);
+
+                // subtract mean before calculating the variances to reduce calculations
+                for(int batch = 0; batch < batch_size; batch++){
+                    for(int n = 0; n < weight_inp; n++){
+                        input_activations[activations_flat_indx(n,batch)] -= mean_vec[n];
+                    }
+                }
+
+                // calculate the standard deviation after offsetting to mean 0
+                std_dev_vec = get_std_dev(input_activations, batch_size);
+
+                // divide the activations by standard dev
+                for(int n = 0; n < weight_inp; n++){
+                    def_float_t reci_dev = 1.0/std_dev_vec[n];
+                    for(int batch = 0; batch < batch_size; batch++){
+                        // divide each value by std dev
+                        input_activations[activations_flat_indx(n,batch)] *= reci_dev;
+                    }
+                }
+
+                // scale each value by gamma & add bias (beta)
+                for(int n = 0; n < weight_inp; n++){
+                    for(int batch = 0; batch < batch_size; batch++){
+                        input_activations[activations_flat_indx(n,batch)] *= gamma_weights[flat_indx(n, 0)];
+                        input_activations[activations_flat_indx(n,batch)] += bias[n];
+                    }
+                }
+
+                this->cached_run_id = run_id;
+                this->cached_activation_values = input_activations;  // confirmed: creates copy
+                this->cached_batch_size = batch_size;
+
+                #if TELE_PROP==1
+                    std::cout << "FORWARD ACTIVATIONS of id=" << this->id << "  weight_out=" << this->weight_out << "  batch_size=" << batch_size << "  activations(row-major):" << std::endl;
+                    // if(cached_activation_values.size() > 10){}
+                    for(int i = 0; (i < cached_activation_values.size() && i < 12); i++){
+                        std::cout << cached_activation_values[i] << "  ";
+                    }
+                    if(cached_activation_values.size() >= 12){
+                        std::cout << "....";
+                    }
+                    std::cout << std::endl;
+                #endif
+                if(TELEMETRY == 2){
+                    std::cout << "Input Values" << std::endl;
+                    for(int i = 0; i < input_activations.size(); i++){
+                        std::cout << input_activations[i] << " ";
+                    }
+                    std::cout << std::endl;
+
+
+                    std::cout << "Output Values" << std::endl;
+                    for(int i = 0; i < input_activations.size(); i++){
+                        std::cout << input_activations[i] << " ";
+                    }
+                    std::cout << std::endl;
+                }
+
+                this->being_evaluated = 0;
+
+                return input_activations;
+            }
+
         }
 
 
@@ -1523,27 +1758,26 @@ public:
             }
             std::cout << std::endl;
         #endif
+        
+        // check if forward prop caches errors are fresh, otherwise, wrong errors will be calculated.
+        if(this->cached_run_id < run_id){
+            if(TELEMETRY) {std::cout << "Uncalculated forward prop cache detected. this=" << this << std::endl;}
+            this->get_activation_rec(run_id, batch_size);    // recalculating forward prop
+        }
+
+        // check if forward prop batch size is same as backprop batch size
+        if(this->cached_batch_size != batch_size){
+            print_err("Error: Forward prop batch size does not match backprop batch size.")
+            this->being_corrected = 0;
+            return activation_error;
+        }
 
         if(this->layer_type == Fully_Connected_INPUTS){
-            // check if forward prop caches errors are fresh, otherwise, wrong errors will be calculated.
-            if(this->cached_run_id < run_id){
-                if(TELEMETRY) {std::cout << "Uncalculated forward prop cache detected. this=" << this << std::endl;}
-                this->get_activation_rec(run_id, batch_size);    // recalculating forward prop
-            }
-
-            // check if forward prop batch size is same as backprop batch size
-            if(this->cached_batch_size != batch_size){
-                print_err("Error: Forward prop batch size does not match backprop batch size.")
-                this->being_corrected = 0;
-                return activation_error;
-            }
-
-
             // activation_error is the error in current layer // dZ_0 = A_l_0 - Y_ground-truth
             // std::vector<def_float_t> error_diff;    // dZ_0 = A_l_0 - Y_ground-truth
             // error_diff.reserve(activation_error.size());
             #if USE_SIMD    // TODO: Add SIMD instructions
-            
+                std::cout << "Unimplemented!" << std::endl;
             #else
                 // getting difference (error) in current activation and expected activation
                 // for(int i = 0; i < activation_error.size(); i++){
@@ -1566,7 +1800,7 @@ public:
                     return activation_error;
                 }
 
-
+                {
                 // LEGACY: 
                 // for(int i = 0; i < this->input_layers.size(); i++){
                 //     // asking this layer's input_layers for their activation
@@ -1579,6 +1813,7 @@ public:
                 //         return activation_error;
                 //     }
                 // }
+                }
 
                 this->being_evaluated = 0;
 
@@ -1666,6 +1901,7 @@ public:
                 std::vector<def_float_t> old_weights = this->weights;
 
 
+                {
                 // #if MAE_CALCULATION == 1
                 //     std::vector<def_float_t> reci_node_age(1,this->size());
 
@@ -1694,6 +1930,7 @@ public:
                 //         this->bias[i] -= delta_bias[i] * learning_rate * reci_node_age[i];
                 //     }
                 // #else
+                }
 
 
                     #if BACKPROP_MOMENTUM == 1
@@ -1840,6 +2077,7 @@ public:
 
                 this->adjust_arch();
 
+                {
                 // LEGACY: below code assumes column-major instead of batch-major
                 // for(int i = 0; i < (this->input_layers.size()); i++) {  // for each layer
                 //     std::vector<def_float_t> this_errors;
@@ -1882,16 +2120,14 @@ public:
                 //     this->input_layers[i]->get_correct_error_rec(run_id, batch_size, this_errors, learning_rate);
                     
                 // }
-
-
-
-
-
+            }
             #endif
 
 
-        }else if(this->layer_type== Convolutional_INPUTS){
+        }else if(this->layer_type == Convolutional_INPUTS){
 
+        }else if(this->layer_type == Batch_Normalization){
+            
         }
 
         

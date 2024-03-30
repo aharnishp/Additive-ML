@@ -13,7 +13,7 @@
 #define pb push_back
 
 #define train_data_sample_limit 43000
-#define learning_rate_def 8.0/2048.0
+#define learning_rate_def 10/2048.0
 // 0.015625
 
 #define epoch_count 1
@@ -26,12 +26,22 @@ int main(){
     net.output_layer->activationFn=LReLU;
     net.output_layer->fix_weights();
 
-    // nlayer myBatchNorm(Batch_Normalization);
 
-    // // myBatchNorm.input_layers = {net.input_layer};
-    // myBatchNorm.add_input_layer(net.input_layer);
+    nlayer myBatchNorm(Batch_Normalization);
 
-    // net.output_layer->input_layers = {&myBatchNorm};
+    // myBatchNorm.input_layers = {net.input_layer};
+    myBatchNorm.add_input_layer(net.input_layer);
+
+    std::vector<nlayer*> inp_layers;
+    
+    inp_layers.push_back(&net.input_layer[0]);
+    inp_layers.push_back(&myBatchNorm);
+
+
+    net.output_layer->input_layers = inp_layers;
+
+
+    myBatchNorm.fix_weights();
 
     net.output_layer->print_weights();
     std::cout << "net.output_lahyer->weights.size() = " << net.output_layer->weights.size() << std::endl;
@@ -78,7 +88,6 @@ int main(){
 
 
     // output = net.forward_prop(input,2);
-
     // // give solution and check for errors
     // std::vector<def_float_t> new_weight = {1.0,0,0,0,1.0,0};
     // std::vector<def_float_t> new_bias = {0,0};
@@ -86,10 +95,10 @@ int main(){
     // net.output_layer->bias = new_bias;
     // net.output_layer->input_layers[0]->weights = new_weight;
     // net.output_layer->input_layers[0]->bias = new_bias;
-
     // give close solution and check divergence or convergence
     // std::vector<def_float_t> new_weight = {1.0,0,0,0,1.0,0};
     // std::vector<def_float_t> new_weight = {0.99,0,0,0,0.99,0};
+    // std::vector<def_float_t> new_weight = {0.9,0,0,0,0.9,0};
     // std::vector<def_float_t> new_bias = {0,0};
     // net.output_layer->weights = new_weight;
     // net.output_layer->bias = new_bias;
@@ -104,7 +113,7 @@ int main(){
     std::cout << std::endl;
 
 
-    for(int i = 0; i < 1600; i++){
+    for(int i = 0; i < 1000; i++){
         std::cout << "run_id = " << net.get_run_id() << std::endl;
         net.output_layer->print_weights();
         net.backward_prop(input,expected_output, 2);

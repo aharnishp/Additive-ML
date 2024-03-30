@@ -378,7 +378,7 @@ class nnetwork{
             return (this->output_layer->get_activation_rec(run_id,batch_size));
         }
 
-        // return this->output_layer->cached_activation_values;        
+        return this->output_layer->cached_activation_values;        
     }
 
     /**
