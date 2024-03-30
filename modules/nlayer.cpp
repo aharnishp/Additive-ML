@@ -1849,7 +1849,6 @@ public:
                 //         for(int batch_num = 0; batch_num < batch_size; batch_num++){
                 //             sum += activation_error[(batch_num*this->weight_out) + row] * last_inputs[(batch_num*this->weight_inp) + col];
                 //         }
-
                 //         delta_weight.push_back(sum * reci_batch_size);
                 //     }
                 // }

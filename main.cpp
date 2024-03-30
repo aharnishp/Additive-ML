@@ -26,22 +26,28 @@ int main(){
     net.output_layer->activationFn=LReLU;
     net.output_layer->fix_weights();
 
+    // multi layer error prop test 
+    net.add_layer_between_output(2,ReLU,learning_rate_def);
+    net.output_layer->input_layers[0]->fix_weights();
+    net.output_layer->fix_weights();
 
-    nlayer myBatchNorm(Batch_Normalization);
 
-    // myBatchNorm.input_layers = {net.input_layer};
-    myBatchNorm.add_input_layer(net.input_layer);
+// // Batch Norm test code
+//     nlayer myBatchNorm(Batch_Normalization);
 
-    std::vector<nlayer*> inp_layers;
+//     // myBatchNorm.input_layers = {net.input_layer};
+//     myBatchNorm.add_input_layer(net.input_layer);
+
+//     std::vector<nlayer*> inp_layers;
     
-    inp_layers.push_back(&net.input_layer[0]);
-    inp_layers.push_back(&myBatchNorm);
+//     inp_layers.push_back(&net.input_layer[0]);
+//     inp_layers.push_back(&myBatchNorm);
 
 
-    net.output_layer->input_layers = inp_layers;
+//     net.output_layer->input_layers = inp_layers;
 
 
-    myBatchNorm.fix_weights();
+//     myBatchNorm.fix_weights();
 
     net.output_layer->print_weights();
     std::cout << "net.output_lahyer->weights.size() = " << net.output_layer->weights.size() << std::endl;

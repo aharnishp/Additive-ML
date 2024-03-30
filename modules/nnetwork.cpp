@@ -485,7 +485,15 @@ class nnetwork{
             unvisited.pop_back();   // remove from last
             visited.insert(this_layer);   // insert this to visted
                        
-            std::cout << "# layer-id=" << this_layer->id << " \tlayer-size=" << this_layer->size() << " \tinput_layers:" << std::endl;
+            std::cout << "# layer-id=" << this_layer->id << " \tlayer-size=" << this_layer->size() << " type=";
+            if(this_layer->layer_type == Fully_Connected_INPUTS){
+                std::cout << "FCC";
+            }else if(this_layer->layer_type == Convolutional_INPUTS){
+                std::cout << "Conv";
+            }else if(this_layer->layer_type == Batch_Normalization){
+                std::cout << "Batch Norm";
+            }
+            std::cout << " \tinput_layers:" << std::endl;
             std::cout << "    printing weights(" << this_layer->weight_inp << " x " << this_layer->weight_out << ")" << std::endl;
 
 
