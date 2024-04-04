@@ -13,7 +13,7 @@
 #define pb push_back
 
 #define train_data_sample_limit 43000
-#define learning_rate_def 10/2048.0
+#define learning_rate_def 5.0/2048.0
 // 0.015625
 
 #define epoch_count 1
@@ -24,12 +24,15 @@
 int main(){
     nnetwork net(2,2,learning_rate_def);
     net.output_layer->activationFn=LReLU;
-    net.output_layer->fix_weights();
+    // net.output_layer->fix_weights();
 
     // multi layer error prop test 
     net.add_layer_between_output(2,ReLU,learning_rate_def);
-    net.output_layer->input_layers[0]->fix_weights();
-    net.output_layer->fix_weights();
+    // net.add_layer_between_output(2,ReLU,learning_rate_def);
+    // net.add_layer_between_output(2,ReLU,learning_rate_def);
+    // net.output_layer->input_layers[0]->fix_weights();
+    net.output_layer->init_weight(1,1);
+    // net.output_layer->fix_weights();
 
 
 // // Batch Norm test code
@@ -119,7 +122,7 @@ int main(){
     std::cout << std::endl;
 
 
-    for(int i = 0; i < 1000; i++){
+    for(int i = 0; i < 10000; i++){
         std::cout << "run_id = " << net.get_run_id() << std::endl;
         net.output_layer->print_weights();
         net.backward_prop(input,expected_output, 2);

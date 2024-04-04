@@ -13,8 +13,8 @@
 
 
 // the closer to 0, more smooth it is
-#define BACKPROP_MOMENTUM 1
-#define BACKPROP_MOMENTUM_FACTOR 0.05
+#define BACKPROP_MOMENTUM 0
+#define BACKPROP_MOMENTUM_FACTOR 0.5
 
 
 #define MAE_CALCULATION 1
@@ -27,7 +27,7 @@
     #define MAE_HISTORY_SIZE 4
 #endif
 
-#define CLIPPING_MAX_THRESHOLD 5.0/10.0
+#define CLIPPING_MAX_THRESHOLD 10.0/10.0
 
 // #define fori(i,n) for(int i = 0; i < n; i++)
 // #define pb push_back
@@ -1181,11 +1181,11 @@ public:
         }
     }
 
+    #if MAE_CALCULATION == 1
     /**
      * @brief a function to change neural network density as needed based on errors in current layer
     */
     def_int_t adjust_arch(){
-        #if MAE_CALCULATION == 1
             if(this->is_dynamic_layer){
                 // find the node with most error
                 def_float_t error_nodes = 0;
@@ -1218,8 +1218,8 @@ public:
                 return error_nodes;
             }
             return 0;
-        #endif
     }
+    #endif
 
     /**
      * @brief given the n number and batch number, returns the index on column major activations (activaitons of single data point of all neurons are together.)
@@ -2073,8 +2073,9 @@ public:
                     }
                     this->input_layers[lindx]->get_correct_error_rec(run_id, batch_size, this_errors, learning_rate);
                 }
-
+                #if MAE_CALCULATION == 1
                 this->adjust_arch();
+                #endif
 
                 {
                 // LEGACY: below code assumes column-major instead of batch-major
