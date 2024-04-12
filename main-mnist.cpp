@@ -96,7 +96,7 @@ def_int_t get_max_class(std::vector<def_float_t> vec){
 }
 
 int main(){
-
+    nnetwork preclassifier(784,3,learning_rate_def*5);
     nnetwork mnist1(784, 10, learning_rate_def);
     mnist1.output_layer->activationFn=Softmax;
     // mnist1.output_layer->is_dynamic_layer=0;
@@ -110,7 +110,7 @@ int main(){
 
     mnist1.add_layer_between_output(64,custom1,learning_rate_def);
     mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
-
+    
     mnist1.output_layer->add_input_layer(mnist1.output_layer->input_layers[0]->input_layers[0]);
     mnist1.output_layer->input_layers[0]->add_input_layer(mnist1.input_layer);
 

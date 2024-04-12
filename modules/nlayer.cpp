@@ -871,6 +871,8 @@ public:
                 return 1;
             }
 
+
+
             // actually the output activations are of same size as inputs, so the matrix should be scaling identity matrix of size weight_inp x weight_inp, but to save memory, only the diagonals are stored.
             // and the bias is of size weight_inp instead of weight_out
 

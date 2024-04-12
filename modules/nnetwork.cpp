@@ -31,20 +31,20 @@ class nnetwork{
     }
 
 
-    // void append_float_to_char_vector(def_float_t val, vector<char> &output){
-    //     // append float to char vector
+    void append_float_to_char_vector(def_float_t val, vector<char> &output){
+        // append float to char vector
 
-    //     // using reinterpret_cast
-    //     output.insert(output.end(), reinterpret_cast<char*>(&val), reinterpret_cast<char*>(&val) + sizeof(def_float_t));
-    //     // int size_of_def_float_t = sizeof(def_float_t);
+        // using reinterpret_cast
+        output.insert(output.end(), reinterpret_cast<char*>(&val), reinterpret_cast<char*>(&val) + sizeof(def_float_t));
+        // int size_of_def_float_t = sizeof(def_float_t);
 
-    //     // // using memcpy
-    //     // char *val_char = new char[size_of_def_float_t];
-    //     // memcpy(val_char, &val, size_of_def_float_t);
-    //     // for(int i = 0; i < size_of_def_float_t; i++){
-    //     //     output.push_back(val_char[i]);
-    //     // }
-    // }
+        // // using memcpy
+        // char *val_char = new char[size_of_def_float_t];
+        // memcpy(val_char, &val, size_of_def_float_t);
+        // for(int i = 0; i < size_of_def_float_t; i++){
+        //     output.push_back(val_char[i]);
+        // }
+    }
 
     public:
 
@@ -58,7 +58,10 @@ class nnetwork{
         int size_of_def_uint_t = sizeof(def_uint_t);
         int size_of_def_float_t = sizeof(def_float_t);
 
-        vector<char> output;
+        vector<char> output = {'n','l','a','y','e','r'};
+
+        // nlayer header readable
+        // output.push_back('nlayer');
         
         // id
         output.push_back(inp_layer->id);
@@ -123,15 +126,31 @@ class nnetwork{
 
         // store weights
         output.push_back('{');  // not including seperating commas, as faster for batch copy
-            for(int i = 0; i < inp_layer->weights.size(); i++){
-                //  FIXME:
-                output.insert(output.end(), size_of_def_float_t, inp_layer->weights[i]);
+
+        if(inp_layer->layer_type == Fully_Connected_INPUTS){
+            for(int i = 0; i < inp_layer->weight_inp; i++){
+                for(int j = 0; j < inp_layer->weight_inp; j++){
+                    append_float_to_char_vector(inp_layer->weights[inp_layer->flat_indx(i,j)], output);
+                }
             }
+        }
+            // for(int i = 0; i < inp_layer->weights.size(); i++){
+            //     //  FIXME:
+            //     output.insert(output.end(), size_of_def_float_t, inp_layer->weights[i]);
+            // }
             
             // use batch copy to quickly copy all weights
 
             // output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights.data()), reinterpret_cast<char*>(inp_layer->weights.data() + inp_layer->weights.size()*sizeof(def_float_t)));
         output.push_back('}');
+        
+        if(TELEMETRY){
+            std::cout << "Contents of layer id=" << inp_layer->id << ": " << std::endl;
+            for (int i =0; i < output.size(); i++) {
+                std::cout << output[i];
+            }
+            std::cout << "; (size = " << output.size() << ")" << std::endl;
+        }
 
         return output;
     }

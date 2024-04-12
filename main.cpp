@@ -25,6 +25,7 @@ int main(){
     nnetwork net(2,2,learning_rate_def);
     net.output_layer->activationFn=LReLU;
     // net.output_layer->fix_weights();
+    
 
     // multi layer error prop test 
     net.add_layer_between_output(2,ReLU,learning_rate_def);
@@ -33,7 +34,6 @@ int main(){
     // net.output_layer->input_layers[0]->fix_weights();
     net.output_layer->init_weight(1,1);
     // net.output_layer->fix_weights();
-
 
 // // Batch Norm test code
 //     nlayer myBatchNorm(Batch_Normalization);
@@ -145,9 +145,11 @@ int main(){
     }
     std::cout << std::endl;
 
-    nlayer mynlayer;
+    net.export_nnetwork_to_file("identity-main.ann");
 
-    std::cout << "size of (mynlayer) = " << sizeof(mynlayer) << std::endl;
+    // nlayer mynlayer;
+
+    // std::cout << "size of (mynlayer) = " << sizeof(mynlayer) << std::endl;
 
     // std::cout << "Network created" << std::endl;
 
