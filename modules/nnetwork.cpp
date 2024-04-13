@@ -691,6 +691,124 @@ class nnetwork{
 
         return 0;
     }
+
+
+    int import_nnetwork_from_file(string filepath){
+        // check if file is opened
+        std::ifstream file(filepath, std::ios::in); // try to open the file in read mode
+
+        if (file.is_open() != 1) {
+            std::cerr << "Error opening file '" << filepath << "'." << std::endl;
+            return -1;
+        }
+            
+
+        // read 3 bytes from the file
+        char buffer[4]; // allocate a character array of size 3
+        char magic_code[3]; // allocate a character array of size 3
+        magic_code[0] = 'A'; magic_code[1] = 'N'; magic_code[2] = 'N';
+        if (file.read(buffer, 4)) { // check if read operation was successful
+            // process the read data in buffer here
+            if(strncmp(buffer,magic_code,3)){   // if it is different from magic code
+                std::cerr << "Error: File '" << filepath << "' is not a valid nnetwork file." << std::endl;
+                return -1; 
+            }else{
+                if(TELEMETRY){
+                    // std::cout << "" << std::endl;
+                    std::cout << "nnetwork file detected!" << std::endl;
+                }
+            }
+        }
+            
+        // read 1 byte of data version
+        char data_version;
+        if (file.read(&data_version, 1)) {
+            // process the read data in buffer here
+            if(data_version != DEFAULT_LAYER_VERSION){
+                std::cerr << "Error: File '" << filepath << "': Data version mismatch. expected =" << DEFAULT_LAYER_VERSION << " found=" << data_version << std::endl;
+                return -1; 
+            }else{
+                if(TELEMETRY){
+                    std::cout << "Data version: " << (int)data_version << std::endl;
+                }
+            }
+        }
+
+        // read 1 byte of def_uint_small_t
+        char def_uint_small_t_size;
+        if (file.read(&def_uint_small_t_size, 1)) {
+            // process the read data in buffer here
+            if(def_uint_small_t_size != sizeof(def_uint_small_t)){
+                std::cerr << "Warning: File '" << filepath << "' has different uint size." << std::endl;
+                }
+        }
+        if(TELEMETRY){
+            std::cout << "def_uint_small_t size: " << (int)def_uint_small_t_size << std::endl;
+        }
+
+        // read 1 byte of def_int_t
+        char def_int_t_size;
+        if (file.read(&def_int_t_size, 1)) {
+            // process the read data in buffer here
+            if(def_int_t_size != sizeof(def_int_t)){
+                std::cerr << "Warning: File '" << filepath << "' has different int size." << std::endl;
+            }
+        }
+        if(TELEMETRY){
+            std::cout << "def_int_t size: " << (int)def_int_t_size << std::endl;
+        }
+
+        // read 1 byte of def_float_t
+        char def_float_t_size;
+        if (file.read(&def_float_t_size, 1)) {
+            // process the read data in buffer here
+            if(def_float_t_size != sizeof(def_float_t)){
+                std::cerr << "Warning: File '" << filepath << "' has different float size." << std::endl;
+            }
+        }
+        if(TELEMETRY){
+            std::cout << "def_float_t size: " << (int)def_float_t_size << std::endl;
+        }
+
+        // read 1 byte of byte_ordering
+        char byte_ordering;
+        if (file.read(&byte_ordering, 1)) {
+            // process the read data in buffer here
+            if(byte_ordering != 1){
+                std::cerr << "Error: File '" << filepath << "' has different byte ordering." << std::endl;
+                return -1;
+            }
+        }
+
+        // read 4 bytes of output_layer_id
+        def_uint_t output_layer_id;
+        if (file.read((char*)&output_layer_id, sizeof(def_uint_t))) {
+            // process the read data in buffer here
+            if(TELEMETRY){
+                std::cout << "output_layer_id: " << output_layer_id << std::endl;
+            }
+        }
+
+        // read 4 bytes of input_layer_id
+        def_uint_t input_layer_id;
+        if (file.read((char*)&input_layer_id, sizeof(def_uint_t))) {
+            // process the read data in buffer here
+            if(TELEMETRY){
+                std::cout << "input_layer_id: " << input_layer_id << std::endl;
+            }
+        }
+
+        
+
+        // close the file
+        file.close();
+        if(TELEMETRY){
+            std::cout << "File was read successfully." << std::endl;
+        }
+        return 0;
+    }
+
+
 };
 
 
