@@ -1,5 +1,7 @@
 #include "nlayer.hpp"
 
+#include <fstream>
+
 #include <vector>
 #include <cmath>
 #include <cstring>
@@ -148,6 +150,8 @@ public:
 
     // vector of pointers storing pointer to input layers
     std::vector<nlayer*> input_layers;
+
+    std::vector<def_uint_t> unlinked_input_layers;  // stores the id of the input layers that are not pointer linked yet
 
 
     // weights will only be used when not an input layer and layer_type = Fully Connected
@@ -310,6 +314,117 @@ public:
     nlayer(nlayer_conn_t new_layer_type){
         this->layer_type = new_layer_type;
         this->learning_rate = INITIAL_LEARNING_RATE;
+    }
+
+    float get_def_uint_t_from_file(std::ifstream &file, def_uint_small_t sizeof_def_uint_t){
+        def_uint_t val;
+        file.read((char*)&val, sizeof_def_uint_t);
+        return val;
+    }
+
+    /**
+     * @brief construct nlayer from file reader
+     * @param file_reader The file reader to read from.
+     * @param sizeof_def_uint_t The size of def_uint_t in bytes.
+     * @param sizeof_def_float_t The size of def_float_t in bytes.
+     * 
+    */
+    nlayer(std::ifstream &file, def_uint_small_t sizeof_def_uint_t, def_uint_small_t sizeof_def_float_t, def_uint_small_t sizeof_activation_fn_t, def_uint_small_t byte_order){
+        
+        // read first 6 bytes to confirm nlayer
+        char nlayer_check[6];
+        file.read(nlayer_check, 6);
+        if(strncmp(nlayer_check, "nlayer",6) != 0){
+            print_err("Error: nlayer header corrupted.");
+            return;
+        }
+
+        // read '{'
+        char sep_char;
+        file.read(&sep_char, 1);
+
+        // read id
+        file.read((char*)&id, sizeof(def_uint_t));
+
+        file.read(&sep_char, 1);    // read ','
+
+        // read layer type
+        file.read((char*)&layer_type, sizeof(nlayer_conn_t));
+
+        file.read(&sep_char, 1);    // read ','
+
+        // read x, y, z
+        file.read((char*)&x, sizeof(def_uint_t));
+        file.read((char*)&y, sizeof(def_uint_t));
+        file.read((char*)&z, sizeof(def_uint_t));
+
+        file.read(&sep_char, 1);    // read ','
+
+        // read number of input layers
+        def_uint_t num_input_layers;
+        file.read((char*)&num_input_layers, sizeof(def_uint_t));
+
+        file.read(&sep_char, 1);    // read '['
+
+        unlinked_input_layers.clear();
+
+        // read input layers
+        for(int i = 0; i < num_input_layers; i++){
+            def_uint_t input_layer_id;
+            file.read((char*)&input_layer_id, sizeof(def_uint_t));
+            unlinked_input_layers.push_back(input_layer_id);
+        }
+
+        file.read(&sep_char, 1);    // read ']'
+        file.read(&sep_char, 1);    // read ','
+
+        if(TELEMETRY){
+            std::streampos pos = file.tellg();
+            std::cout << "File reader position: " << pos << std::endl;
+        }
+
+        // read activation function
+        file.read((char*)&activationFn, sizeof(activation_fn_t));
+        
+
+        file.read(&sep_char, 1);    // read ','
+        
+        // read learning rate
+        file.read((char*)&learning_rate, sizeof(def_float_t));
+
+        file.read(&sep_char, 1);    // read ','
+
+        // read weight_inp, weight_out
+        file.read((char*)&weight_inp, sizeof(def_uint_t));
+        file.read(&sep_char, 1);    // read ','
+        file.read((char*)&weight_out, sizeof(def_uint_t));
+
+        // resize weights
+        weight_inp_allocated = weight_inp;
+        weight_out_allocated = weight_out;
+        weights.clear();
+        weights.resize(weight_inp_allocated * weight_out_allocated);
+
+        file.read(&sep_char, 1);    // read ','
+        file.read(&sep_char, 1);    // read '['
+
+        // read weights without reserved space
+        for(int i = 0; i < weight_inp_allocated * weight_out_allocated; i++){
+            file.read((char*)&weights[i], sizeof(def_float_t));
+        }
+
+        file.read(&sep_char, 1);    // read ']'
+        file.read(&sep_char, 1);    // read '}'
+        // verify if sep_char is '}'
+        if(sep_char != '}'){
+            print_err("Error: nlayer file read error!");
+            return;
+        }else{
+            if(TELEMETRY){
+                std::cout << "nlayer id=" << this->id << "read successful." << std::endl;
+                this->print_weights();
+            }
+        }
     }
     
     /**
@@ -1175,7 +1290,7 @@ public:
     void print_weights(){
         // takes care of reserved weights.
         std::cout << "Weight id=" << this->id << " weights.size()=" << this->weights.size() << " = (" << this->weight_inp <<  "x" << this->weight_inp<< "), allocated=(" << this->weight_inp_allocated << "," << this->weight_out_allocated << ")" << std::endl;
-        for(int i = 0; i < this->weight_out; i++){
+        for(int i = 0; i < this->weight_inp; i++){
             for(int j = 0; j < this->weight_out; j++){
                 std::cout << this->weights[flat_indx(i,j)] << " ";
             }

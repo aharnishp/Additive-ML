@@ -22,11 +22,21 @@
 #define test_batch_size_def 1
 
 int main(){
+    nnetwork net_base(2,2,learning_rate_def);
+    net_base.output_layer->activationFn=LReLU;
+    net_base.output_layer->fix_weights();
+    net_base.add_layer_between_output(2, LReLU, 0.01);
+
+    net_base.export_nnetwork_to_file("identity-main.ann");
+
+
+
     nnetwork net(2,2,learning_rate_def);
 
     // import network from file
     net.import_nnetwork_from_file("identity-main.ann");
-    
+
+    net.print_architecture();
 
     return 0;
 }

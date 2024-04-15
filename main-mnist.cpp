@@ -96,23 +96,26 @@ def_int_t get_max_class(std::vector<def_float_t> vec){
 }
 
 int main(){
-    nnetwork preclassifier(784,3,learning_rate_def*5);
+    // nnetwork preclassifier(784,3,learning_rate_def*5);
     nnetwork mnist1(784, 10, learning_rate_def);
     mnist1.output_layer->activationFn=Softmax;
     // mnist1.output_layer->is_dynamic_layer=0;
 
 
-    // mnist1.add_layer_between_output(16,custom1,learning_rate_def);
+    mnist1.add_layer_between_output(16,LReLU,learning_rate_def);
+    mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
+
+    mnist1.output_layer->init_weight(1,1);
+    mnist1.output_layer->input_layers[0]->init_weight(1,1);
+
+    // mnist1.add_layer_between_output(64,custom1,learning_rate_def);
     // mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
 
-    mnist1.add_layer_between_output(64,custom1,learning_rate_def);
-    mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
-
-    mnist1.add_layer_between_output(64,custom1,learning_rate_def);
-    mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
+    // mnist1.add_layer_between_output(64,custom1,learning_rate_def);
+    // mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
     
-    mnist1.output_layer->add_input_layer(mnist1.output_layer->input_layers[0]->input_layers[0]);
-    mnist1.output_layer->input_layers[0]->add_input_layer(mnist1.input_layer);
+    // mnist1.output_layer->add_input_layer(mnist1.output_layer->input_layers[0]->input_layers[0]);
+    // mnist1.output_layer->input_layers[0]->add_input_layer(mnist1.input_layer);
 
     // mnist1.add_layer_between_output(16,ReLU,0.015625/2);
 
