@@ -173,6 +173,22 @@ class nnetwork{
 
             // output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights.data()), reinterpret_cast<char*>(inp_layer->weights.data() + inp_layer->weights.size()*sizeof(def_float_t)));
         output.push_back(']');
+
+        output.push_back(',');
+
+        // store bias size 
+        def_uint_t bias_size = inp_layer->bias.size();
+        for(int i = 0; i < size_of_def_uint_t; i++){
+            output.push_back((bias_size >> (i*8)) & 0xFF);
+        }
+
+        // store bias
+        output.push_back('[');
+        for(int i = 0; i < inp_layer->bias.size(); i++){
+            append_float_to_char_vector(inp_layer->bias[i], output);
+        }
+        output.push_back(']');
+
     
         // final concluding nlayer.
         output.push_back('}');
@@ -841,11 +857,20 @@ class nnetwork{
             // if this layer id is output_layer_id, assign it to output_layer
             if(this_layer->id == output_layer_id){
                 this->output_layer = this_layer;
+
+                // mark inside layer as output
+                this_layer->is_dynamic_layer = 0;
             }
 
             // if this layer id is input_layer_id, assign it to input_layer
             if(this_layer->id == input_layer_id){
                 this->input_layer = this_layer;
+
+                // mark inside layer as input
+                this_layer->is_input_layer = 1;
+
+                // add this layer to input_layers
+                this->input_layers.push_back(this_layer);
             }
             
 

@@ -405,6 +405,27 @@ public:
         }
 
         file.read(&sep_char, 1);    // read ']'
+
+        // read bias
+        file.read(&sep_char, 1);    // read ','
+
+        // read size of bias
+        def_uint_t bias_size;
+        file.read((char*)&bias_size, sizeof(def_uint_t));
+
+        file.read(&sep_char, 1);    // read '['
+
+        bias.clear();
+        bias.resize(bias_size);
+
+        for(int i = 0; i < bias_size; i++){
+            def_float_t bias_val;
+            file.read((char*)&bias_val, sizeof(def_float_t));
+            bias[i] = (bias_val);
+        }
+
+        file.read(&sep_char, 1);    // read ']'
+
         file.read(&sep_char, 1);    // read '}'
         // verify if sep_char is '}'
         if(sep_char != '}'){
