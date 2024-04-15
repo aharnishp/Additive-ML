@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <string>
 #include <set>
+#include <map>
 
 #include <iostream>
 #include <fstream>
@@ -48,6 +49,14 @@ class nnetwork{
 
     public:
 
+    void append_float_to_char_vector(def_float_t val, vector<char> &output){
+        // append float to char vector
+
+        // using reinterpret_cast
+        output.insert(output.end(), reinterpret_cast<char*>(&val), reinterpret_cast<char*>(&val) + sizeof(def_float_t));
+    }
+
+   
     /**
      * @brief returns a char array including all properties of the nlayer (including weights)
      * @param inp_layer pointer to the nlayer
@@ -58,47 +67,72 @@ class nnetwork{
         int size_of_def_uint_t = sizeof(def_uint_t);
         int size_of_def_float_t = sizeof(def_float_t);
 
-        vector<char> output;
-        
+        vector<char> output = {'n','l','a','y','e','r','{'};
+
+        // nlayer header readable
+        // output.push_back('nlayer');
+
         // id
-        output.push_back(inp_layer->id);
+        for(int i = 0; i < size_of_def_uint_t; i++){
+            output.push_back((inp_layer->id >> (i*8)) & 0xFF);
+        }
         output.push_back(',');
-        
+
         // layer type
-        output.push_back(inp_layer->layer_type);
+        if ( sizeof(nlayer_conn_t) == 1 ){
+            output.push_back(inp_layer->layer_type);
+        } else {
+            for(int i = 0; i < sizeof(nlayer_conn_t); i++){
+                output.push_back((inp_layer->layer_type >> (i*8)) & 0xFF);
+            }
+        }
         output.push_back(',');
 
         if(inp_layer->layer_type == 0){
             // input layer
-            output.push_back(inp_layer->x);
-                output.push_back(',');
-            output.push_back(inp_layer->y);
-                output.push_back(',');
-            output.push_back(inp_layer->z);
-                output.push_back(',');
+            def_uint_t x = inp_layer->x;
+            def_uint_t y = inp_layer->y;
+            def_uint_t z = inp_layer->z;
+
+            // store x, y, z as 16 bits
+            for(int i = 0; i < sizeof(def_uint_t); i++){
+                output.push_back((x >> (i*8)) & 0xFF);
+            }
+            for(int i = 0; i < sizeof(def_uint_t); i++){
+                output.push_back((y >> (i*8)) & 0xFF);
+            }
+            for(int i = 0; i < sizeof(def_uint_t); i++){
+                output.push_back((z >> (i*8)) & 0xFF);
+            }
         }
+        output.push_back(',');
 
         // number of input layers
         def_uint_t num_inp_layers = inp_layer->input_layers.size();
-        output.insert(output.end(), reinterpret_cast<char*>(&num_inp_layers), reinterpret_cast<char*>(&num_inp_layers) + size_of_def_uint_t);
-        output.push_back(',');
-
-        output.push_back('{'); // input_layers
+        for(int i = 0; i < size_of_def_uint_t; i++){
+            output.push_back((num_inp_layers >> (i*8)) & 0xFF);
+        }
+        output.push_back('['); // input_layers
             for(int i = 0; i < inp_layer->input_layers.size(); i++){
                 // store as little endian into size of def_uint_t
                 for(int j = 0; j < size_of_def_uint_t; j++){
                     output.push_back((inp_layer->input_layers[i]->id >> (j*8)) & 0xFF);
                 }
 
-                if(i != inp_layer->input_layers.size()-1)
-                    output.push_back(',');
+                // if(i != inp_layer->input_layers.size()-1)
+                //     output.push_back(',');
             }
 
-        output.push_back('}');
+        output.push_back(']');
         output.push_back(',');
 
+    
+        int sizeofactivation_fn_t = sizeof(activation_fn_t);
         // store activation function
-        output.push_back(inp_layer->activationFn);
+        for(int i = 0; i < sizeofactivation_fn_t; i++){
+            output.push_back((inp_layer->activationFn >> (i*8)) & 0xFF);
+        }
+    
 
         output.push_back(',');
 
@@ -116,114 +150,45 @@ class nnetwork{
         // store weight_inp
         output.insert(output.end(), reinterpret_cast<char*>(&inp_layer->weight_inp), reinterpret_cast<char*>(&inp_layer->weight_inp) + size_of_def_uint_t);
         output.push_back(',');
-
         // store weight_out
         output.insert(output.end(), reinterpret_cast<char*>(&inp_layer->weight_out), reinterpret_cast<char*>(&inp_layer->weight_out) + size_of_def_uint_t);
         output.push_back(',');
 
         // store weights
-        output.push_back('{');  // not including seperating commas, as faster for batch copy
-            for(int i = 0; i < inp_layer->weights.size(); i++){
-                //  FIXME:
-                output.insert(output.end(), size_of_def_float_t, inp_layer->weights[i]);
+        output.push_back('[');  // not including seperating commas, as faster for batch copy
+
+        if(inp_layer->layer_type == Fully_Connected_INPUTS){
+            for(int i = 0; i < inp_layer->weight_inp; i++){
+                for(int j = 0; j < inp_layer->weight_inp; j++){
+                    append_float_to_char_vector(inp_layer->weights[inp_layer->flat_indx(i,j)], output);
+                }
             }
+        }
+            // for(int i = 0; i < inp_layer->weights.size(); i++){
+            //     //  FIXME:
+            //     output.insert(output.end(), size_of_def_float_t, inp_layer->weights[i]);
+            // }
             
             // use batch copy to quickly copy all weights
 
             // output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights.data()), reinterpret_cast<char*>(inp_layer->weights.data() + inp_layer->weights.size()*sizeof(def_float_t)));
+        output.push_back(']');
+    
+        // final concluding nlayer.
         output.push_back('}');
+        
+        if(TELEMETRY){
+            std::cout << "Contents of layer id=" << inp_layer->id << ": " << std::endl;
+            for (int i =0; i < output.size(); i++) {
+                std::cout << output[i];
+            }
+            std::cout << "; (size = " << output.size() << ")" << std::endl;
+        }
 
         return output;
     }
 
-    /**
-     * @brief fills in layer at the end of given input array
-     * @param inp_layer pointer to the nlayer
-     * @param output char vector to be filled
-    */
-    void export_nlayer_to_array(nlayer * inp_layer, std::vector<char> &output){
-        // generate a string including all properties of the nlayer
 
-        int size_of_def_uint_t = sizeof(def_uint_t);
-        int size_of_def_float_t = sizeof(def_float_t);
-
-        // vector<char> output;
-        
-        // id
-        output.push_back(inp_layer->id);
-        output.push_back(',');
-        
-        // layer type
-        output.push_back(inp_layer->layer_type);
-        output.push_back(',');
-
-        if(inp_layer->layer_type == 0){
-            // input layer
-            output.push_back(inp_layer->x);
-                output.push_back(',');
-            output.push_back(inp_layer->y);
-                output.push_back(',');
-            output.push_back(inp_layer->z);
-                output.push_back(',');
-        }
-
-        // number of input layers
-        def_uint_t num_inp_layers = inp_layer->input_layers.size();
-        output.insert(output.end(), reinterpret_cast<char*>(&num_inp_layers), reinterpret_cast<char*>(&num_inp_layers) + size_of_def_uint_t);
-        output.push_back(',');
-
-        output.push_back('{'); // input_layers
-            for(int i = 0; i < inp_layer->input_layers.size(); i++){
-                // store as little endian into size of def_uint_t
-                for(int j = 0; j < size_of_def_uint_t; j++){
-                    output.push_back((inp_layer->input_layers[i]->id >> (j*8)) & 0xFF);
-                }
-
-                if(i != inp_layer->input_layers.size()-1)
-                    output.push_back(',');
-            }
-
-        output.push_back('}');
-        output.push_back(',');
-
-        // store activation function
-        output.push_back(inp_layer->activationFn);
-
-        output.push_back(',');
-
-        def_float_t this_learning_rate = inp_layer->learning_rate;
-
-        // append learning rate as float
-        output.insert(output.end(), reinterpret_cast<char*>(&this_learning_rate), reinterpret_cast<char*>(&this_learning_rate) + size_of_def_float_t);
-        // for(int i = 0; i < size_of_def_float_t; i++){
-        //     // store as little endian
-        //     // copy each byte in host order
-        //     output.insert(output.end(), reinterpret_cast<char*>(&this_learning_rate) + i, reinterpret_cast<char*>(&this_learning_rate) + i + 1);
-        // }
-        output.push_back(',');
-
-        // store weight_inp
-        output.insert(output.end(), reinterpret_cast<char*>(&inp_layer->weight_inp), reinterpret_cast<char*>(&inp_layer->weight_inp) + size_of_def_uint_t);
-        output.push_back(',');
-
-        // store weight_out
-        output.insert(output.end(), reinterpret_cast<char*>(&inp_layer->weight_out), reinterpret_cast<char*>(&inp_layer->weight_out) + size_of_def_uint_t);
-        output.push_back(',');
-
-        // store weights
-        output.push_back('{');  // not including seperating commas, as faster for batch copy
-            for(int i = 0; i < inp_layer->weights.size(); i++){
-                // FIXME: check if this actually works
-                output.insert(output.end(), size_of_def_float_t, inp_layer->weights[i]);
-            //     output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights[i].data()), reinterpret_cast<char*>(inp_layer->weights[i].data() + inp_layer->weights[i].size()*size_of_def_float_t));
-            }
-            
-            // use batch copy to quickly copy all weights
-            // output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights.data()), reinterpret_cast<char*>(inp_layer->weights.data() + inp_layer->weights.size()*sizeof(def_float_t)));
-        output.push_back('}');
-
-        // return output;
-    }
 
     public:
     nlayer *input_layer;
@@ -475,7 +440,7 @@ class nnetwork{
     /**
      * @brief Prints the network architecture in BFS from output node
     */
-    void print_architecture(){
+    int print_architecture(){
         std::cout << "printing nnetwork architecture" << std::endl;
         std::set<nlayer*> visited;
         std::vector<nlayer*> unvisited;
@@ -498,6 +463,7 @@ class nnetwork{
             visited.insert(this_layer);
         }
 
+        return visited.size();
     }
 
     private:
@@ -531,8 +497,7 @@ class nnetwork{
 
     public:
 
-
-    //   ______                       _
+//   ______                       _
     //  |  ____|                     | |
     //  | |__  __  ___ __   ___  _ __| |_
     //  |  __| \ \/ / '_ \ / _ \| '__| __|
@@ -593,8 +558,23 @@ class nnetwork{
 
         // export the id of output layer
         insert_def_uint_t(export_buffer, this->output_layer->id);
+
+        // if network has more than one input layer, give error
+        if(this->input_layers.size() > 1){
+            print_err("Network has more than one input layer. Exporting only the first input layer.");
+            return -1;
+        }
+
         //export the id of input layer
         insert_def_uint_t(export_buffer, this->input_layer->id);
+
+        // store the number of layers
+        int num_layers = this->print_architecture();
+        insert_def_uint_t(export_buffer, num_layers);
+
+
+        // export marking start of nlayers
+        export_buffer.push_back('[');
 
 
         //    ___ ____ ____ _  _ ____ ____ ____ ____
@@ -652,6 +632,9 @@ class nnetwork{
             export_buffer.insert(export_buffer.end(), this_export.begin(), this_export.end());
         }
 
+        // close the array of nlayers
+        export_buffer.push_back(']');
+
         // store the export buffer to file filepath
         std::ofstream file(filepath);
         if(file.is_open()){
@@ -664,6 +647,218 @@ class nnetwork{
 
         return 0;
     }
+
+    /**
+     * @brief read one nlayer from file
+    */
+
+
+    /**
+     * @brief import all the layers of the network from a file
+     * @param filepath string of path to the file to be imported
+    */
+    int import_nnetwork_from_file(string filepath){
+        // check if file is opened
+        std::ifstream file(filepath, std::ios::in); // try to open the file in read mode
+
+        if(file.is_open() != 1) {
+            std::cerr << "Error opening file '" << filepath << "'." << std::endl;
+            return -1;
+        }
+            
+
+        // read 3 bytes from the file
+        char buffer[4]; // allocate a character array of size 3
+        char magic_code[3]; // allocate a character array of size 3
+        magic_code[0] = 'A'; magic_code[1] = 'N'; magic_code[2] = 'N';
+        if (file.read(buffer, 4)) { // check if read operation was successful
+            // process the read data in buffer here
+            if(strncmp(buffer,magic_code,3)){   // if it is different from magic code
+                std::cerr << "Error: File '" << filepath << "' is not a valid nnetwork file." << std::endl;
+                return -1; 
+            }else{
+                if(TELEMETRY){
+                    // std::cout << "" << std::endl;
+                    std::cout << "nnetwork file detected!" << std::endl;
+                }
+            }
+        }
+            
+        // read 1 byte of data version
+        char data_version;
+        if (file.read(&data_version, 1)) {
+            // process the read data in buffer here
+            if(data_version != DEFAULT_LAYER_VERSION){
+                std::cerr << "Error: File '" << filepath << "': Data version mismatch. expected =" << DEFAULT_LAYER_VERSION << " found=" << data_version << std::endl;
+                return -1; 
+            }else{
+                if(TELEMETRY){
+                    std::cout << "Data version: " << (int)data_version << std::endl;
+                }
+            }
+        }
+
+        // read 1 byte of def_uint_small_t
+        char def_uint_small_t_size;
+        if (file.read(&def_uint_small_t_size, 1)) {
+            // process the read data in buffer here
+            if(def_uint_small_t_size != sizeof(def_uint_small_t)){
+                std::cerr << "Warning: File '" << filepath << "' has different uint size." << std::endl;
+                }
+        }
+        if(TELEMETRY){
+            std::cout << "def_uint_small_t size: " << (int)def_uint_small_t_size << std::endl;
+        }
+
+        // read 1 byte of size of def_int_t
+        char def_int_t_size;
+        if (file.read(&def_int_t_size, 1)) {
+            // process the read data in buffer here
+            if(def_int_t_size != sizeof(def_int_t)){
+                std::cerr << "Warning: File '" << filepath << "' has different int size." << std::endl;
+            }
+        }
+        if(TELEMETRY){
+            std::cout << "def_int_t size: " << (int)def_int_t_size << std::endl;
+        }
+
+        // read 1 byte of size of def_float_t
+        char def_float_t_size;
+        if (file.read(&def_float_t_size, 1)) {
+            // process the read data in buffer here
+            if(def_float_t_size != sizeof(def_float_t)){
+                std::cerr << "Warning: File '" << filepath << "' has different float size." << std::endl;
+            }
+        }
+        if(TELEMETRY){
+            std::cout << "def_float_t size: " << (int)def_float_t_size << std::endl;
+        }
+
+        // read 1 byte of byte_ordering
+        char byte_ordering;
+        if (file.read(&byte_ordering, 1)) {
+            // process the read data in buffer here
+            if(byte_ordering != 1){
+                std::cerr << "Error: File '" << filepath << "' has different byte ordering." << std::endl;
+                return -1;
+            }
+        }
+
+        // read 4 bytes of output_layer_id
+        def_uint_t output_layer_id;
+        if (file.read((char*)&output_layer_id, sizeof(def_uint_t))) {
+            // process the read data in buffer here
+            if(TELEMETRY){
+                std::cout << "output_layer_id: " << output_layer_id << std::endl;
+            }
+        }
+
+        // read 4 bytes of input_layer_id
+        def_uint_t input_layer_id;
+        if (file.read((char*)&input_layer_id, sizeof(def_uint_t))) {
+            // process the read data in buffer here
+            if(TELEMETRY){
+                std::cout << "input_layer_id: " << input_layer_id << std::endl;
+            }
+        }
+
+        if(TELEMETRY){
+            std::streampos pos = file.tellg();
+            std::cout << "File reader position: " << pos << std::endl;
+        }
+
+        // read number of nlayers
+        def_uint_t num_nlayers;
+        if (file.read((char*)&num_nlayers, sizeof(def_uint_t))) {
+            // process the read data in buffer here
+            if(TELEMETRY){
+                std::cout << "num_nlayers: " << num_nlayers << std::endl;
+            }
+        }
+
+        if(TELEMETRY){
+            std::streampos pos = file.tellg();
+            std::cout << "File reader position: " << pos << std::endl;
+        }
+
+        // read nlayers start character
+        char next_char;
+        if (file.read(&next_char, 1)) {
+            // process the read data in buffer here
+            if(next_char != '['){
+                std::cerr << "Error: File '" << filepath << "' has different byte ordering." << std::endl;
+                return -1;
+            }
+        }
+
+
+        if(TELEMETRY){
+            std::streampos pos = file.tellg();
+            std::cout << "File reader position: " << pos << std::endl;
+        }
+
+        // construct nlayers from file
+        std::vector<nlayer*> all_layers;
+        std::map<def_uint_t, nlayer*> id_to_layer;
+
+        // construct layers one after other
+        for(int i = 0; i < num_nlayers; i++){
+            // read the layer
+            nlayer *new_layer = new nlayer(file, def_int_t_size, def_float_t_size, def_uint_small_t_size, byte_ordering);
+            all_layers.push_back(new_layer);
+            id_to_layer[new_layer->id] = new_layer;
+
+            if(TELEMETRY){
+                std::cout << "layer id=" << new_layer->id << " constructed." << std::endl;
+            }
+        }
+
+        // read nlayers end character
+        if (file.read(&next_char, 1)) {
+            // process the read data in buffer here
+            if(next_char != ']'){
+                std::cerr << "Error: File '" << filepath << "' read error. (couldn't find matching end character)" << std::endl;
+                return -1;
+            }
+        }
+
+
+        // connect the layers
+        // for each layer, add input layers from unlinked to input_layers
+        for(int layr_indx = 0; layr_indx < all_layers.size(); layr_indx++){
+            nlayer *this_layer = all_layers[layr_indx];
+            for(int inp_layr_indx = 0; inp_layr_indx < this_layer->unlinked_input_layers.size(); inp_layr_indx++){
+                this_layer->input_layers.push_back(id_to_layer[this_layer->unlinked_input_layers[inp_layr_indx]]);
+
+                if(TELEMETRY){
+                    std::cout << "layer id=" << this_layer->id << " added input layer id=" << this_layer->unlinked_input_layers[inp_layr_indx] << std::endl;
+                }
+            }
+
+            // clear unlinked_input_layers
+            this_layer->unlinked_input_layers.clear();
+
+            // if this layer id is output_layer_id, assign it to output_layer
+            if(this_layer->id == output_layer_id){
+                this->output_layer = this_layer;
+            }
+
+            // if this layer id is input_layer_id, assign it to input_layer
+            if(this_layer->id == input_layer_id){
+                this->input_layer = this_layer;
+            }
+            
+
+        }
+
+        // close the file
+        file.close();
+        if(TELEMETRY){
+            std::cout << "File was read successfully." << std::endl;
+        }
+        return 0;
+    }
+
 };
 
 
