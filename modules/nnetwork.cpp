@@ -159,7 +159,7 @@ class nnetwork{
 
         if(inp_layer->layer_type == Fully_Connected_INPUTS){
             for(int i = 0; i < inp_layer->weight_inp; i++){
-                for(int j = 0; j < inp_layer->weight_inp; j++){
+                for(int j = 0; j < inp_layer->weight_out; j++){
                     append_float_to_char_vector(inp_layer->weights[inp_layer->flat_indx(i,j)], output);
                 }
             }

@@ -1167,8 +1167,8 @@ public:
     */
     void print_weights(){
         // takes care of reserved weights.
-        std::cout << "Weight id=" << this->id << " weights.size()=" << this->weights.size() << " = (" << this->weight_inp <<  "x" << this->weight_inp<< "), allocated=(" << this->weight_inp_allocated << "," << this->weight_out_allocated << ")" << std::endl;
-        for(int i = 0; i < this->weight_out; i++){
+        std::cout << "Weight id=" << this->id << " weights.size()=" << this->weights.size() << " = (" << this->weight_inp <<  "x" << this->weight_out<< "), allocated=(" << this->weight_inp_allocated << "," << this->weight_out_allocated << ")" << std::endl;
+        for(int i = 0; i < this->weight_inp; i++){
             for(int j = 0; j < this->weight_out; j++){
                 std::cout << this->weights[flat_indx(i,j)] << " ";
             }
