@@ -1,18 +1,56 @@
 #include "nlayer.hpp"
 
+
 #include <vector>
 #include <cmath>
 #include <cstring>
+
+// Settings
+#define TELE_PROP 0
+
+#define TELEMETRY 0     // 0 is no string, 1 is only errors, 2 is full telemetry
+#define DEFAULT_LAYER_VERSION 1
+#define INITIAL_LEARNING_RATE 0.05
+
+#define FILE_SYSTEM_SUPPORT 1
+#define NETWORK_STREAM_SUPPORT 1
+
+
+
+#if defined(FILE_SYSTEM_SUPPORT)
+    #include<fstream>
+#endif
+
+#if defined(NETWORK_STREAM_SUPPORT)
+
+    #ifdef __linux__
+        #include <sys/types.h>
+        #include <sys/socket.h>
+        #include <netinet/in.h>
+        #include <netdb.h>
+        #include <arpa/inet.h>
+    #else
+        // network library for raspberry pi pico 
+        #include <pico/stdlib.h>
+        #include <pico/net.h>
+        #include <pico/stdio.h>
+        #include <pico/time.h>
+    #endif
+
+#endif
+
+
+
 #if defined(__x86_64__) || defined(__aarch64__)
     #define USE_SIMD 0    // previously = 1
     // #include<cblas.h>
-    #include<immintrin.h>
+    // #include<immintrin.h>
 #else
     #define USE_SIMD 0
 #endif
 
 #define BACKPROP_MOMENTUM 1
-#define BACKPROP_MOMENTUM_FACTOR 0.5
+#define BACKPROP_MOMENTUM_FACTOR 0.95
 
 
 #define MAE_CALCULATION 1
@@ -25,7 +63,7 @@
     #define MAE_HISTORY_SIZE 4
 #endif
 
-#define CLIPPING_MAX_THRESHOLD 5.0/10.0
+#define CLIPPING_MAX_THRESHOLD 10.0/1.0
 
 // #define fori(i,n) for(int i = 0; i < n; i++)
 // #define pb push_back
@@ -71,12 +109,6 @@ typedef enum {
 #define leaky_relu_slope 0.05
 
 
-// Settings
-#define TELE_PROP 1
-
-#define TELEMETRY 1     // 0 is no string, 1 is only errors, 2 is full telemetry
-#define DEFAULT_LAYER_VERSION 1
-#define INITIAL_LEARNING_RATE 0.05
 
 
 
@@ -312,9 +344,59 @@ public:
     }
 
 
+    // /**
+    //  * @brief construct nlayer from byte stream of a TCP socket
+    //  * @param socket The socket to read from.
+    //  * @param sizeof_def_uint_t The size of def_uint_t in bytes.
+    //  * @param sizeof_def_float_t The size of def_float_t in bytes.
+    //  * @param sizeof_activation_fn_t The size of activation_fn_t in bytes.
+    //  * @param byte_order The byte order of the data.
+    // */
+    // nlayer( int socket, def_uint_small_t sizeof_def_uint_t, def_uint_small_t sizeof_def_float_t, def_uint_small_t sizeof_activation_fn_t, def_uint_small_t byte_order){
+    //     // read first 6 bytes to confirm nlayer
+    //     char nlayer_check[6];
+    //     read(socket, nlayer_check, 6);
+    //     if(strncmp(nlayer_check, "nlayer",6) != 0){
+    //         print_err("Error: nlayer header corrupted.");
+    //         return;
+    //     
+    //     // read '{'
+    //     char sep_char;
+    //     read(socket, &sep_char, 1);
+    //     // read id
+    //     read(socket, &id, sizeof(def_uint_t));
+    //     read(socket, &sep_char, 1);    // read ','
+    //     // read layer type
+    //     read(socket, &layer_type, sizeof(nlayer_conn_t));
+    //     read(socket, &sep_char, 1);    // read ','
+    //     // read x, y, z
+    //     read(socket, &x, sizeof(def_uint_t));
+    //     read(socket, &y, sizeof(def_uint_t));
+    //     read(socket, &z, sizeof(def_uint_t));
+    //     read(socket, &sep_char, 1);    // read ','
+    //     // read number of input layers
+    //     def_uint_t num_input_layers;
+    //     read(socket, &num_input_layers, sizeof(def_uint_t));
+    //     read(socket, &sep_char, 1);    // read '['
+    //     unlinked_input_layers.clear();
+    //     // read input layers
+    //     for(int i = 0; i < num_input_layers; i++){
+    //         def_uint_t input_layer_id;
+    //         read(socket, &input_layer_id, sizeof(def_uint_t));
+    //         unlinked_input_layers.push_back(input_layer_id);
+    //     }
+    //     read(socket, &sep_char, 1);    // read ']'
+    //     read(socket, &sep_char, 1);    // read ','
+    //     // read activation function
+    //     read(socket, &activationFn, sizeof(activation_fn_t));
+    //     read(socket, &sep_char, 1);    // read ','
+    //     // read learning rate
+    //     read(socket, &learning_rate, sizeof(def_float_t));
+    //     read(socket, &sep_char,
+    // }
 
     /**
-     * @brief construct nlayer from file reader
+     * @brief construct nlayer from stream of file reader
      * @param file_reader The file reader to read from.
      * @param sizeof_def_uint_t The size of def_uint_t in bytes.
      * @param sizeof_def_float_t The size of def_float_t in bytes.
@@ -1495,7 +1577,7 @@ public:
                 for(int batch = 0; batch < batch_size; batch++){
                     sum += error_diff[batch_size*drow + batch]*last_input[batch_size*acol + batch];
                 }
-                if(abs(sum) > CLIPPING_MAX_THRESHOLD){
+                if(std::abs(sum) > CLIPPING_MAX_THRESHOLD){
                     sum = (sum > 0) ? CLIPPING_MAX_THRESHOLD : -CLIPPING_MAX_THRESHOLD;
                 }
                 delta_weights[weight_inp * drow + acol] = sum;
@@ -1603,7 +1685,7 @@ public:
             // start adding current errors to this.
             for (int n = 0; n < this->size(); n++){
                 for(int batch = 0; batch < batch_size; batch++){
-                    mae_history_sum[mae_history_flat_indx(mae_col_indx, n)] += abs(activation_errors[(n + batch*this->weight_out)]);
+                    mae_history_sum[mae_history_flat_indx(mae_col_indx, n)] += std::abs(activation_errors[(n + batch*this->weight_out)]);
                     // FIXME: Slow code below (because conditional statement is inside for loop every batch)
                     mae_col_indx_add_count += 1;
                     if(mae_col_indx_add_count >= mae_runs_per_col){
@@ -1928,9 +2010,9 @@ public:
                     // add errors and 1 to mae_count to all nodes
                     for(int n = 0; n < my_size; n++){   // nth 
                         mae_count[n] += batch_size;
-                        // mae_vec += abs()
+                        // mae_vec += std::abs()
                         for(int batch = 0; batch < batch_size; batch++){
-                            mae_vec[n] += abs(activation_error[batch_size*n + batch]);
+                            mae_vec[n] += std::abs(activation_error[batch_size*n + batch]);
                         }
                     }
 

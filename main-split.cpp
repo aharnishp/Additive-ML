@@ -13,7 +13,7 @@
 #define pb push_back
 
 
-#define train_batch_size_def 16
+#define train_batch_size_def 32
 #define test_batch_size_def 1
 
 // FIXME: this is for testing only
@@ -27,7 +27,7 @@
 
 
 #define learning_rate 0.015625
-#define mnist_a_b_hidden_size 64
+#define mnist_a_b_hidden_size 32
 
 void print1D(std::vector<def_float_t> vec){
     fori(i, vec.size()){
@@ -117,11 +117,13 @@ int main(){
     mna.add_layer_between_output(mnist_a_b_hidden_size,LReLU,learning_rate);
     mna.output_layer->is_dynamic_layer = 0;
     mna.output_layer->input_layers[0]->is_dynamic_layer = 0;
+    mna.output_layer->init_weight(1,1);
 
     nnetwork mnb(784,7,learning_rate);
     mnb.add_layer_between_output(mnist_a_b_hidden_size,LReLU,learning_rate);
     mnb.output_layer->is_dynamic_layer = 0;
     mnb.output_layer->input_layers[0]->is_dynamic_layer = 0;
+    mnb.output_layer->init_weight(1,1);
 
     std::cout << "### ARCHITECTURE ###" << std::endl;
     print_architecture(mna);
@@ -210,66 +212,125 @@ int main(){
     }
 
 
-    // // testing the mnist a and b
-    // std::string line;
-    // std::ifstream test_file("dataset/mnist-test.csv");
-    // std::vector<def_float_t> test_batch;
-    // std::vector<def_float_t> test_labels;
-    // std::getline(test_file, line);
-    // test_batch.reserve(784);
-    // def_uint_t test_batch_size = test_batch_size_def; // train_test_batch_size
-    // def_uint_t test_line_count = 0;
-    // def_int_t train_iter = 0;
-    //
-    // def_int_t total_correct = 0;
-    //
-    // while(std::getline(test_file, line)){
-    //     // parse the line
-    //     std::stringstream ss(line);
-    //     std::string token;
-    //
-    //     // first element is the label
-    //     std::getline(ss, token, ',');
-    //     // onehot encode the labels
-    //     std::vector<def_float_t> onehA = onehot_encode_unknown(stoi(token), 0, 5);
-    //     std::vector<def_float_t> onehB = onehot_encode_unknown(stoi(token), 4, 9);
-    //
-    //     // insert the onehot vector to labels
-    //     test_labels.insert(test_labels.end(), onehA.begin(),onehA.end());
-    //     test_labels.insert(test_labels.end(), onehB.begin(),onehB.end());
-    //
-    //     // rest of the elements are the input values
-    //     // std::vector<def_float_t> input_values = parse_mnist_data_normalized(line);
-    //     std::vector<def_float_t> input_values;
-    //     while(std::getline(ss, token, ',')){
-    //         input_values.pb(std::stof(token)/255.0);
-    //     }
-    //
-    //     test_batch.insert(test_batch.end(), input_values.begin(), input_values.end());
-    //
-    //     train_iter++;
-    //     if(TELEMETRY_TRAIN_PROGRESS){
-    //         std::cout << "train_iter=" << train_iter << std::endl;
-    //     }
+    {// testing the mnist a and b
+    std::string line;
+    std::ifstream test_file("dataset/mnist-test.csv");
+    std::vector<def_float_t> test_batch;
+    std::vector<def_float_t> test_labels;
+    std::getline(test_file, line);
+    test_batch.reserve(784);
+    def_uint_t test_batch_size = test_batch_size_def; // train_test_batch_size
+    def_uint_t test_line_countS = 0;
+    def_int_t train_iterS = 0;
     
+    def_int_t total_S_correct = 0;
+    
+    while(std::getline(test_file, line)){
+        // parse the line
+        std::stringstream ss(line);
+        std::string token;
+    
+        // first element is the label
+        std::getline(ss, token, ',');
+        // onehot encode the labels
+        std::vector<def_float_t> onehA = onehot_encode_unknown(stoi(token), 0, 5);
+        std::vector<def_float_t> onehB = onehot_encode_unknown(stoi(token), 4, 9);
+    
+        // insert the onehot vector to labels
+        test_labels.insert(test_labels.end(), onehA.begin(),onehA.end());
+        test_labels.insert(test_labels.end(), onehB.begin(),onehB.end());
+    
+        // rest of the elements are the input values
+        // std::vector<def_float_t> input_values = parse_mnist_data_normalized(line);
+        std::vector<def_float_t> input_values;
+        while(std::getline(ss, token, ',')){
+            input_values.pb(std::stof(token)/255.0);
+        }
+    
+        test_batch.insert(test_batch.end(), input_values.begin(), input_values.end());
+    
+        train_iterS++;
+        if(1){
+            std::cout << "train_iter=" << train_iterS << std::endl;
+        }
+
+        test_line_countS++;
+
+        if(test_line_countS == test_batch_size){
+            if(TELEMETRY_TRAIN_DETAILS){
+                std::cout << "test_batch.size() = " << test_batch.size() << std::endl;
+            }
+            // train the networks
+            std::vector<def_float_t> predictionsA = mna.forward_prop(test_batch, test_batch_size);
+            std::vector<def_float_t> predictionsB = mnb.forward_prop(test_batch, test_batch_size);
+            // reset the training batchs
+            test_batch.clear(); 
+            
+            // compare the results
+            def_uint_t correct_count = 0;
+            fori(i, test_batch_size){
+                def_int_t batch_start = i*10;
+                def_int_t batch_end = batch_start + 10;
+                def_int_t max_index = 0;
+                def_float_t max_value = predictionsA[batch_start];
+                for(int j = batch_start+1; j < batch_end; j++){
+                    if(predictionsA[j] > max_value){
+                        max_value = predictionsA[j];
+                        max_index = j;
+                    }
+                }
+                std::cout << "pred=" << max_index << " \t corr=" << test_labels[max_index] << std::endl;
+                if(test_labels[max_index] == 1){
+                    correct_count++;
+                }
+            }
+            total_S_correct += correct_count;
+    
+            test_labels.clear();
+    
+            test_line_countS = 0;
+        }
+    }
+    std::cout << "Total Split Accuracy = " << (total_S_correct*100.0)/train_iterS << std::endl;
+    
+    }
+
+
+
+
     // training new network with this as it's input
     nnetwork mnc(14, 10, learning_rate);
     // mnc.add_layer_between_output(14,LReLU,learning_rate);
+    // mnc.output_layer->weights = {
+    //     1,0,0,0,0,0,0,0,0,0,
+    //     0,1,0,0,0,0,0,0,0,0,
+    //     0,0,1,0,0,0,0,0,0,0,
+    //     0,0,0,1,0,0,0,0,0,0,
+    //     0,0,0,0,1,0,0,0,0,0,
+    //     0,0,0,0,0,1,0,0,0,0,
+    //     0,0,0,0,0,0,0,0,0,0,
+    //     0,0,0,0,1,0,0,0,0,0,
+    //     0,0,0,0,0,1,0,0,0,0,
+    //     0,0,0,0,0,0,1,0,0,0,
+    //     0,0,0,0,0,0,0,1,0,0,
+    //     0,0,0,0,0,0,0,0,1,0,
+    //     0,0,0,0,0,0,0,0,0,1,
+    //     0,0,0,0,0,0,0,0,0,0
+    // };
     mnc.output_layer->weights = {
-        1,0,0,0,0,0,0,0,0,0,
-        0,1,0,0,0,0,0,0,0,0,
-        0,0,1,0,0,0,0,0,0,0,
-        0,0,0,1,0,0,0,0,0,0,
-        0,0,0,0,1,0,0,0,0,0,
-        0,0,0,0,0,1,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,1,0,0,0,0,0,
-        0,0,0,0,0,1,0,0,0,0,
-        0,0,0,0,0,0,1,0,0,0,
-        0,0,0,0,0,0,0,1,0,0,
-        0,0,0,0,0,0,0,0,1,0,
-        0,0,0,0,0,0,0,0,0,1,
-        0,0,0,0,0,0,0,0,0,0
+        1, 0, 0, 0, 0, 0  , 0, 0, 0, 0,
+        0, 1, 0, 0, 0, 0  , 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0  , 0, 0, 0, 0,
+        0, 0, 0, 1, 0, 0  , 0, 0, 0, 0,
+        0, 0, 0, 0, 1, 0  , 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0,
+       -1,-1,-1,-1,-1,-0.5, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0  , 1, 0, 0, 0,
+        0, 0, 0, 0, 0, 0  , 0, 1, 0, 0,
+        0, 0, 0, 0, 0, 0  , 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0  , 0, 0, 0, 1,
+        0, 0, 0, 0, 0,-0.5,-1,-1,-1,-1
     };
     fori(i,mnc.output_layer->weights.size()){
         mnc.output_layer->weights[i] += 0.05;
@@ -287,6 +348,8 @@ int main(){
     //     0,0,0,0,0,0,0,0,0,0,0,0,1,0
     // };
     mnc.output_layer->activationFn=Softmax;
+    mnc.output_layer->is_dynamic_layer = 0;
+    mnc.output_layer->init_weight(1,1);
 
     std::cout << "### ARCHITECTURE ###" << std::endl;
     print_architecture(mnc);

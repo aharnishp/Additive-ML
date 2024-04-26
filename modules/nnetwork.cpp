@@ -55,7 +55,6 @@ class nnetwork{
         // using reinterpret_cast
         output.insert(output.end(), reinterpret_cast<char*>(&val), reinterpret_cast<char*>(&val) + sizeof(def_float_t));
     }
-
    
     /**
      * @brief returns a char array including all properties of the nlayer (including weights)
@@ -125,14 +124,12 @@ class nnetwork{
 
         output.push_back(']');
         output.push_back(',');
-
     
         int sizeofactivation_fn_t = sizeof(activation_fn_t);
         // store activation function
         for(int i = 0; i < sizeofactivation_fn_t; i++){
             output.push_back((inp_layer->activationFn >> (i*8)) & 0xFF);
         }
-    
 
         output.push_back(',');
 
@@ -168,7 +165,6 @@ class nnetwork{
             //     //  FIXME:
             //     output.insert(output.end(), size_of_def_float_t, inp_layer->weights[i]);
             // }
-            
             // use batch copy to quickly copy all weights
 
             // output.insert(output.end(), reinterpret_cast<char*>(inp_layer->weights.data()), reinterpret_cast<char*>(inp_layer->weights.data() + inp_layer->weights.size()*sizeof(def_float_t)));
@@ -189,7 +185,6 @@ class nnetwork{
         }
         output.push_back(']');
 
-    
         // final concluding nlayer.
         output.push_back('}');
         
@@ -512,6 +507,10 @@ class nnetwork{
 
 
     public:
+
+    // Export and Stream over network
+    
+
 
 //   ______                       _
     //  |  ____|                     | |
