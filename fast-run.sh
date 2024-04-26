@@ -1,1 +1,0 @@
-g++ main.cpp -o build/main -O3 -march=native -mavx && time build/main

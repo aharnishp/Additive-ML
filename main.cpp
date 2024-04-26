@@ -13,12 +13,15 @@
 #define pb push_back
 
 #define train_data_sample_limit 42000
-#define learning_rate_def 0.015625/4
+#define learning_rate_def 16/4096.0
+// 0.015625/1 // 64/4096.0
 
-#define epoch_count 1
+#define epoch_count 3
 
-#define train_batch_size_def 1
+#define train_batch_size_def 32
 #define test_batch_size_def 1
+
+#define MNIST_MEAN_OFFSET 0
 
 
 void print1D(std::vector<def_float_t> vec){
@@ -72,7 +75,7 @@ std::vector<def_float_t> parse_mnist_data_normalized(std::string line){
     std::stringstream ss(line);
     std::string token;
     while(std::getline(ss, token, ',')){
-        input_values.pb(std::stof(token)/255.0);
+        input_values.pb(std::stof(token)/255.0 + MNIST_MEAN_OFFSET);
     }
     return input_values;
 }
@@ -96,23 +99,20 @@ int main(){
 
     nnetwork mnist1(784, 10, learning_rate_def);
     mnist1.output_layer->activationFn=Softmax;
-    mnist1.add_layer_between_output(64,LReLU,learning_rate_def);
-    // mnist1.add_layer_between_output(10,LReLU,learning_rate_def);
-    // // mnist1.add_layer_between_output(32,LReLU,0.015625*2);
-    // // mnist1.add_layer_between_output(16,LReLU,0.015625*2);
-    // // mnist1.output_layer->input_layers.push_back(mnist1.input_layer);
-    // // mnist1.output_layer->input_layers[0]->input_layers.push_back(mnist1.input_layer);
-    
-    // mnist1.output_layer->input_layers.push_back(mnist1.output_layer->input_layers[0]->input_layers[0]);
-    // mnist1.output_layer->auto_grow_weight();
+    // mnist1.output_layer->is_dynamic_layer=0;
 
-    // mnist1.output_layer->input_layers.push_back(mnist1.input_layer);
-    // mnist1.output_layer->auto_grow_weight();
-    
-    // // mnist1.output_layer->input_layers[0]->auto_grow_weight();
-    // // mnist1.output_layer->input_layers[0]->input_layers[0]->auto_grow_weight();
 
-    
+    mnist1.add_layer_between_output(16,custom1,learning_rate_def);
+    mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
+
+    // mnist1.add_layer_between_output(64,custom1,learning_rate_def);
+    // mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
+
+    // mnist1.add_layer_between_output(64,custom1,learning_rate_def);
+    // mnist1.output_layer->input_layers[0]->is_dynamic_layer=0;
+
+    // mnist1.output_layer->add_input_layer(mnist1.output_layer->input_layers[0]->input_layers[0]);
+    // mnist1.output_layer->input_layers[0]->add_input_layer(mnist1.input_layer);
 
     // mnist1.add_layer_between_output(16,ReLU,0.015625/2);
 
@@ -125,14 +125,14 @@ int main(){
     std::cout << "hidden->x = " << mnist1.output_layer->input_layers[0]->x << std::endl;
     std::cout << "input_layer->x = " << mnist1.input_layer->x << std::endl;
 
-    mnist1.output_layer->init_weight(1);
+    mnist1.output_layer->init_weight(1,1);
 
     // testing the AVX Matrix multiplication
     std::vector<def_float_t> mat1 = {1,2,3,4,5,6,7,8,9,10,11,12};
     std::vector<def_float_t> mat2 = {1,2,3,4,5,6,7,8,9,10,11,12};
     std::vector<def_float_t> output = {};
 
-    mnist1.export_nnetwork_to_file("test.txt");
+    // mnist1.export_nnetwork_to_file("test.txt");
 
     // mnist1.output_layer->matrix_multiply(mat1.data(), mat2.data(), output, 3, 4, 3);
 
@@ -147,7 +147,7 @@ int main(){
     // }
 
 
-    if(0){
+    if(1){
         std::vector<def_float_t> input_values(784, 0.1);
 
         fori(epoch, epoch_count){
@@ -209,7 +209,7 @@ int main(){
                 // std::vector<def_float_t> input_values;
                 while(std::getline(ss, token, ',')){
                     // std::cout << (token_num++) << ",\t" << train_line_count << std::endl;
-                    training_batch.pb(std::stof(token)/255.0);
+                    training_batch.pb(std::stof(token)/255.0 + MNIST_MEAN_OFFSET);
                 }
 
                 std::cout << lab_num << "\t" << train_iter++ << std::endl;
@@ -367,6 +367,53 @@ int main(){
 
         
     }
+
+    mnist1.export_nnetwork_to_file("mnist1.ann");
+
+    mnist1.print_architecture();
+
+//     std::vector<def_float_t> num9;
+
+//     num9 = {
+// 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+// 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+//     };
+
+//     // num9 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,14,149,193,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,91,224,253,253,19,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,28,235,254,253,253,166,18,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,144,253,254,253,253,253,238,115,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,31,241,253,208,185,253,253,253,231,24,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,79,254,193,0,8,98,219,254,255,201,18,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,86,253,80,0,0,0,182,253,254,191,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,175,253,155,0,0,0,234,253,254,135,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,86,253,208,40,85,166,251,237,254,236,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,18,238,253,254,253,253,185,36,216,253,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,68,240,255,254,145,8,0,134,254,223,35,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,68,158,142,12,0,0,9,175,253,161,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,88,253,226,18,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,166,253,126,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,48,245,253,38,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,115,254,172,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,21,218,254,46,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,30,254,165,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,186,244,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,14,223,78,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//     for(int i = 0; i < num9.size(); i++){
+//         // num9[i] = 255;
+//     }
+//     std::cout << "size of inputs (num9):" << num9.size() << std::endl;
+
+//     std::vector<def_float_t> numOutput = mnist1.forward_prop(num9, 1);
+
+//     print1D(numOutput);
 
     // print_architecture(mnist1);
     // std::cout << "hidden layer weights" << std::endl;
